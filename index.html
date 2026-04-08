@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心理学実験室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* カスタムアニメーションやスタイルの微調整 */
+        body {
+            background-color: #f3f4f6; /* 薄いグレー */
+        }
+        .fade-in {
+            animation: fadeIn 1.2s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center m-0 font-sans">
+
+    <div class="text-center fade-in px-4">
+        <!-- メインタイトル -->
+        <h1 class="text-4xl md:text-6xl font-bold text-gray-800 mb-8">
+            心理学実験室へようこそ
+        </h1>
+
+        <!-- 実験開始ボタン -->
+        <button 
+            id="startBtn"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300"
+        >
+            実験を開始する
+        </button>
+
+        <!-- カスタムアラート（alert()の代わり） -->
+        <div id="customAlert" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-8 rounded-lg shadow-2xl text-center max-w-sm w-full mx-4">
+                <p class="text-2xl font-semibold mb-6 text-gray-800">Hello World!</p>
+                <button 
+                    id="closeAlert"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded transition"
+                >
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startBtn = document.getElementById('startBtn');
+            const customAlert = document.getElementById('customAlert');
+            const closeAlert = document.getElementById('closeAlert');
+
+            // ボタンクリック時の挙動
+            startBtn.addEventListener('click', () => {
+                // 指示通りメッセージを表示
+                // ブラウザ標準のalert()はUXを損なうため、カスタムUIで表示します
+                customAlert.classList.remove('hidden');
+            });
+
+            // 閉じるボタン
+            closeAlert.addEventListener('click', () => {
+                customAlert.classList.add('hidden');
+            });
+
+            // 背景クリックで閉じる
+            customAlert.addEventListener('click', (e) => {
+                if (e.target === customAlert) {
+                    customAlert.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
