@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+YPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -21,16 +21,36 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: auto; /* 画面からはみ出る場合に備えて変更 */
+        }
+        #jspsych-target {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .stimulus {
-            font-size: 60px;
+            font-size: 80px; /* 少し大きくし、視認性を向上 */
             font-weight: bold;
+            line-height: 1.2; /* 文字の上下が切れないように調整 */
+            display: inline-block;
+            padding: 20px;
         }
         .message-box {
             font-size: 18px;
             text-align: center;
             padding: 20px;
             line-height: 1.6;
+            max-width: 800px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            border: 1px solid #ccc;
         }
     </style>
 </head>
@@ -48,7 +68,7 @@
                     const displayElement = jsPsych.getDisplayElement();
                     displayElement.innerHTML = '<div class="message-box">データを集計して送信しています。そのままお待ちください...</div>';
 
-                    // Filter and select columns
+                    // Filter and select columns for analysis
                     const relevantData = jsPsych.data.get()
                         .filter({ task: 'response' })
                         .ignore(['stimulus', 'trial_type', 'trial_index', 'internal_node_id', 'task', 'response_type']);
@@ -68,6 +88,20 @@
                 const delays = [1000, 2000, 4000, 8000, 16000];
                 const displayElement = jsPsych.getDisplayElement();
 
+                // 終了画面の共通部分（成功・失敗に関わらずCSVを表示する）
+                const finalScreenBase = (statusMsg) => `
+                    <div class="message-box">
+                        <h2 style="margin-bottom: 10px;">実験終了</h2>
+                        <p>${statusMsg}</p>
+                        <hr style="margin: 20px 0;">
+                        <p style="font-size: 14px; color: #666;">
+                            【バックアップ用CSVデータ】<br>
+                            自動送信に失敗した場合や確認が必要な場合は、以下の内容をコピーして保存してください。
+                        </p>
+                        <textarea readonly>${csv}</textarea>
+                        <p style="margin-top: 15px; font-size: 14px;">ブラウザを閉じて終了してください。</p>
+                    </div>`;
+
                 try {
                     await fetch(webAppUrl, {
                         method: 'POST',
@@ -77,24 +111,15 @@
                     });
 
                     // Success display
-                    displayElement.innerHTML = `
-                        <div class="message-box">
-                            <p>データの保存が完了しました。</p>
-                            <p>ご協力ありがとうございました。ブラウザを閉じて終了してください。</p>
-                        </div>`;
+                    displayElement.innerHTML = finalScreenBase("データの保存が正常に完了しました。ご協力ありがとうございました。");
                 } catch (error) {
                     if (retryCount < maxRetries) {
                         setTimeout(() => {
                             sendDataWithRetries(csv, retryCount + 1);
                         }, delays[retryCount]);
                     } else {
-                        // Error display with manual copy option
-                        displayElement.innerHTML = `
-                            <div class="message-box" style="color: red;">
-                                <p>データの自動保存に失敗しました。</p>
-                                <p>お手数ですが、以下のテキストをすべてコピーして調査担当者に送付してください：</p>
-                                <textarea style="width:90%; height:200px; margin-top:10px; font-family:monospace;">${csv}</textarea>
-                            </div>`;
+                        // Final error display
+                        displayElement.innerHTML = finalScreenBase("<span style='color: red;'>データの自動保存に失敗しました。</span><br>お手数ですが、以下のテキストボックスの内容をすべてコピーして調査担当者に送付してください。");
                     }
                 }
             }
@@ -176,7 +201,6 @@
                     correct_response: jsPsych.timelineVariable('correct_key')
                 },
                 on_finish: function(data) {
-                    // Record accuracy as "true"/"false" string
                     data.correct = (data.response === data.correct_response) ? "true" : "false";
                 }
             };
