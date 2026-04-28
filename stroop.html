@@ -1,70 +1,44 @@
-YPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stroop Task - Data Integration</title>
-    <!-- jsPsych v7.3 -->
+    <title>Stroop Task - jsPsych</title>
+    <!-- jsPsych v7.3 の読み込み -->
     <script src="https://unpkg.com/jspsych@7.3.4"></script>
     <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
     <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
     <style>
-        /* Base Layout Settings */
-        html, body {
+        body {
             background-color: #FFFFFF;
             color: #333;
-            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+            font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+            user-select: none;
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* 防止スクロール */
-        }
-
-        #jspsych-target {
             width: 100vw;
             height: 100vh;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-
-        /* 刺激の表示設定（上下切れを防止） */
+        #jspsych-target {
+            width: 100%;
+            height: 100%;
+        }
+        .jspsych-content {
+            font-size: 24px;
+        }
         .stimulus {
-            font-size: 80px; 
+            font-size: 60px;
             font-weight: bold;
-            line-height: 1.5; /* 行の高さを十分に確保 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 150px; /* 文字が切れないように高さを最低限確保 */
-            min-width: 300px;
-            text-align: center;
-            box-sizing: border-box;
         }
-
-        /* メッセージボックスの設定 */
-        .message-box {
-            font-size: 18px;
+        /* 送信メッセージ用スタイル */
+        .sync-message {
             text-align: center;
             padding: 20px;
-            line-height: 1.6;
-            max-width: 800px;
-            width: 90%;
-            overflow-y: auto;
-            max-height: 90vh;
-        }
-
-        textarea {
-            width: 100%;
-            height: 150px;
-            margin-top: 15px;
-            font-family: monospace;
-            font-size: 12px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            background: #f9f9f9;
         }
     </style>
 </head>
@@ -73,98 +47,54 @@ YPE html>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- Settings ---
-            const webAppUrl = 'https://script.google.com/macros/s/AKfycbzu6mi8N8kSWZ1u6GVroOkHk3aGGjWLeGcnjoLxAn-xHwDnQgf83Frh8w5I9YDsgkeKCg/exec';
+            // 指定されたGASのURL
+            const GAS_URL = "https://script.google.com/macros/s/1rRaKnPIbnz6V_UbHrMB6F_OrRz0KiCbw5qWo6Dh8R34/exec";
 
+            /**
+             * jsPsychの初期化
+             */
             const jsPsych = initJsPsych({
                 display_element: 'jspsych-target',
                 on_finish: function() {
-                    const displayElement = jsPsych.getDisplayElement();
-                    displayElement.innerHTML = '<div class="message-box">データを集計して送信しています。そのままお待ちください...</div>';
-
-                    // 分析に必要なデータのみを抽出
-                    const relevantData = jsPsych.data.get()
-                        .filter({ task: 'response' })
-                        .ignore(['stimulus', 'trial_type', 'trial_index', 'internal_node_id', 'task', 'response_type', 'correct_response']);
-
-                    const csvData = relevantData.csv();
-
-                    // 指数バックオフを用いたデータ送信
-                    sendDataWithRetries(csvData, 0);
+                    sendDataToGas();
                 }
             });
 
-            /**
-             * 指数バックオフによるデータ送信処理
-             */
-            async function sendDataWithRetries(csv, retryCount) {
-                const maxRetries = 5;
-                const delays = [1000, 2000, 4000, 8000, 16000];
-                const displayElement = jsPsych.getDisplayElement();
-
-                const finalScreenBase = (statusMsg) => `
-                    <div class="message-box">
-                        <h2 style="margin-bottom: 10px;">実験終了</h2>
-                        <p>${statusMsg}</p>
-                        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
-                        <p style="font-size: 14px; color: #666; text-align: left;">
-                            【バックアップ用CSVデータ】<br>
-                            自動送信に失敗した場合や確認が必要な場合は、以下の内容をすべてコピーして保存してください。
-                        </p>
-                        <textarea readonly>${csv}</textarea>
-                        <p style="margin-top: 15px; font-size: 14px;">ブラウザを閉じて終了してください。</p>
-                    </div>`;
-
-                try {
-                    await fetch(webAppUrl, {
-                        method: 'POST',
-                        body: JSON.stringify({ csvData: csv }),
-                        headers: { 'Content-Type': 'application/json' },
-                        mode: 'no-cors' 
-                    });
-                    displayElement.innerHTML = finalScreenBase("データの保存が正常に完了しました。ご協力ありがとうございました。");
-                } catch (error) {
-                    if (retryCount < maxRetries) {
-                        setTimeout(() => {
-                            sendDataWithRetries(csv, retryCount + 1);
-                        }, delays[retryCount]);
-                    } else {
-                        displayElement.innerHTML = finalScreenBase("<span style='color: red;'>データの自動保存に失敗しました。</span><br>お手数ですが、上のテキストボックスの内容をすべてコピーして調査担当者に送付してください。");
-                    }
-                }
-            }
-
             const timeline = [];
 
-            // 1. 参加者ID入力
-            const p_id_input = {
+            /**
+             * 1. 参加者情報入力 (survey-text)
+             */
+            const participant_info = {
                 type: jsPsychSurveyText,
                 questions: [
-                    { prompt: '参加者ID（例：学籍番号）を入力してください', name: 'subject_id', required: true }
+                    {prompt: '参加者ID（例：学籍番号）を入力してください:', name: 'subject_id', required: true}
                 ],
                 button_label: '次へ',
                 on_finish: function(data) {
+                    // 全試行に共通して付与されるデータを設定
                     const id = data.response.subject_id;
-                    const timestamp = new Date().toLocaleString('ja-JP');
                     jsPsych.data.addProperties({
                         subject_id: id,
-                        timestamp: timestamp
+                        timestamp: new Date().toISOString()
                     });
                 }
             };
-            timeline.push(p_id_input);
+            timeline.push(participant_info);
 
-            // 2. 教示画面
+            /**
+             * 2. 教示画面
+             */
             const instructions = {
                 type: jsPsychHtmlKeyboardResponse,
                 stimulus: `
                     <div style="text-align: left; line-height: 1.6;">
-                        <p>画面に表示される文字の<strong>「色」</strong>をできるだけ速く答えてください。</p>
-                        <p>・<span style="color:red">赤色</span>の文字なら <strong>'r'</strong> キー</p>
-                        <p>・<span style="color:blue">青色</span>の文字なら <strong>'b'</strong> キー</p>
-                        <p>・<span style="color:green">緑色</span>の文字なら <strong>'g'</strong> キー</p>
+                        <p>文字の<strong>「色」</strong>をキーボードで答えてください。</p>
+                        <p>・<span style="color:red">赤色</span>なら <strong>'r'</strong></p>
+                        <p>・<span style="color:blue">青色</span>なら <strong>'b'</strong></p>
+                        <p>・<span style="color:green">緑色</span>なら <strong>'g'</strong></p>
                         <br>
-                        <p style="text-align: center;">準備ができたら、スペースキーを押して開始してください。</p>
+                        <p style="text-align: center;">スペースキーで開始します。</p>
                     </div>
                 `,
                 choices: [' '],
@@ -172,7 +102,9 @@ YPE html>
             };
             timeline.push(instructions);
 
-            // 3. 刺激の定義
+            /**
+             * 3. 刺激の定義
+             */
             const stimuli_pool = [
                 { text: "赤", color: "red", condition: "congruent", correct_key: "r" },
                 { text: "青", color: "blue", condition: "congruent", correct_key: "b" },
@@ -185,7 +117,7 @@ YPE html>
                 { text: "緑", color: "blue", condition: "incongruent", correct_key: "b" }
             ];
 
-            // 注視点 (500ms)
+            // a. 注視点 (500ms)
             const fixation = {
                 type: jsPsychHtmlKeyboardResponse,
                 stimulus: '<div style="font-size: 60px;">+</div>',
@@ -194,7 +126,7 @@ YPE html>
                 data: { task: 'fixation' }
             };
 
-            // 反応試行
+            // b. 刺激提示 (r, b, gキー)
             const test_trial = {
                 type: jsPsychHtmlKeyboardResponse,
                 stimulus: function() {
@@ -211,11 +143,14 @@ YPE html>
                     correct_response: jsPsych.timelineVariable('correct_key')
                 },
                 on_finish: function(data) {
-                    data.correct = (data.response === data.correct_response) ? "true" : "false";
+                    // 正誤判定を論理値として確実に記録
+                    data.correct = (data.response === data.correct_response);
                 }
             };
 
-            // メイン手続き (10試行)
+            /**
+             * 4. メイン試行ループ (10試行, ITI 1000ms)
+             */
             const main_procedure = {
                 timeline: [fixation, test_trial],
                 timeline_variables: stimuli_pool,
@@ -223,10 +158,56 @@ YPE html>
                     type: 'with-replacement',
                     size: 10
                 },
-                post_trial_gap: 1000 // ITI 1000ms
+                post_trial_gap: 1000
             };
             timeline.push(main_procedure);
 
+            /**
+             * 5. データ送信処理 (GAS)
+             */
+            async function sendDataToGas() {
+                const display = jsPsych.getDisplayElement();
+                display.innerHTML = '<div class="sync-message"><h3>データを送信中...</h3><p>ブラウザを閉じないでお待ちください。</p></div>';
+
+                // 分析対象（response）のデータのみ抽出・整形
+                const relevant_data = jsPsych.data.get()
+                    .filter({task: 'response'})
+                    .ignore('stimulus')
+                    .ignore('trial_type')
+                    .ignore('trial_index')
+                    .ignore('internal_node_id')
+                    .values();
+
+                // 指数バックオフを伴うリトライ関数
+                const upload = async (retries = 5, delay = 1000) => {
+                    try {
+                        await fetch(GAS_URL, {
+                            method: "POST",
+                            mode: "no-cors",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(relevant_data)
+                        });
+                        
+                        // 成功メッセージ
+                        display.innerHTML = '<div class="sync-message"><h3>実験完了</h3><p>データは正常に保存されました。ご協力ありがとうございました。</p></div>';
+                    } catch (error) {
+                        if (retries > 0) {
+                            // エラー時に待機時間を倍にしてリトライ
+                            setTimeout(() => upload(retries - 1, delay * 2), delay);
+                        } else {
+                            // 最終的なエラー表示
+                            display.innerHTML = '<div class="sync-message"><h3>エラー</h3><p>データの送信に失敗しました。この画面をスクリーンショットして管理者に連絡してください。</p></div>';
+                            console.error("Upload failed after retries:", error);
+                        }
+                    }
+                };
+
+                await upload();
+            }
+
+            // 実験の実行
             jsPsych.run(timeline);
         });
     </script>
