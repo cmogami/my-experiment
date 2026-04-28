@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stroop Task - jsPsych</title>
-    <!-- jsPsych v7.3 の読み込み -->
+    <title>Stroop Task - Data Collection</title>
+    <!-- jsPsych v7.3 の読み込み (CDN) -->
     <script src="https://unpkg.com/jspsych@7.3.4"></script>
     <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
@@ -35,10 +35,9 @@
             font-size: 60px;
             font-weight: bold;
         }
-        /* 送信メッセージ用スタイル */
-        .sync-message {
+        .loading-msg {
             text-align: center;
-            padding: 20px;
+            font-size: 20px;
         }
     </style>
 </head>
@@ -47,8 +46,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // 指定されたGASのURL
-            const GAS_URL = "https://script.google.com/macros/s/1rRaKnPIbnz6V_UbHrMB6F_OrRz0KiCbw5qWo6Dh8R34/exec";
+            const GAS_URL = "https://script.google.com/macros/s/AKfycbzu6mi8N8kSWZ1u6GVroOkHk3aGGjWLeGcnjoLxAn-xHwDnQgf83Frh8w5I9YDsgkeKCg/exec";
 
             /**
              * jsPsychの初期化
@@ -56,27 +54,27 @@
             const jsPsych = initJsPsych({
                 display_element: 'jspsych-target',
                 on_finish: function() {
-                    sendDataToGas();
+                    processAndSendData();
                 }
             });
 
             const timeline = [];
 
             /**
-             * 1. 参加者情報入力 (survey-text)
+             * 1. 参加者情報入力 (IDの保持)
              */
             const participant_info = {
                 type: jsPsychSurveyText,
                 questions: [
-                    {prompt: '参加者ID（例：学籍番号）を入力してください:', name: 'subject_id', required: true}
+                    {prompt: "参加者ID（例：学籍番号）を入力してください：", name: 'participant_id', required: true}
                 ],
-                button_label: '次へ',
+                button_label: "次へ",
                 on_finish: function(data) {
-                    // 全試行に共通して付与されるデータを設定
-                    const id = data.response.subject_id;
+                    const id = data.response.participant_id;
+                    // 以降の全試行にIDと開始時刻を付与
                     jsPsych.data.addProperties({
                         subject_id: id,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toLocaleString('ja-JP')
                     });
                 }
             };
@@ -117,7 +115,7 @@
                 { text: "緑", color: "blue", condition: "incongruent", correct_key: "b" }
             ];
 
-            // a. 注視点 (500ms)
+            // 注視点 (500ms)
             const fixation = {
                 type: jsPsychHtmlKeyboardResponse,
                 stimulus: '<div style="font-size: 60px;">+</div>',
@@ -126,7 +124,7 @@
                 data: { task: 'fixation' }
             };
 
-            // b. 刺激提示 (r, b, gキー)
+            // 刺激提示 (ITI 1000msはメインプロシージャのpost_trial_gapで管理)
             const test_trial = {
                 type: jsPsychHtmlKeyboardResponse,
                 stimulus: function() {
@@ -143,13 +141,13 @@
                     correct_response: jsPsych.timelineVariable('correct_key')
                 },
                 on_finish: function(data) {
-                    // 正誤判定を論理値として確実に記録
+                    // 正誤判定を確実に記録 (true / false)
                     data.correct = (data.response === data.correct_response);
                 }
             };
 
             /**
-             * 4. メイン試行ループ (10試行, ITI 1000ms)
+             * 試行ループ (10試行)
              */
             const main_procedure = {
                 timeline: [fixation, test_trial],
@@ -158,53 +156,77 @@
                     type: 'with-replacement',
                     size: 10
                 },
-                post_trial_gap: 1000
+                post_trial_gap: 1000 // ITI
             };
             timeline.push(main_procedure);
 
             /**
-             * 5. データ送信処理 (GAS)
+             * データの整形と送信処理
              */
-            async function sendDataToGas() {
-                const display = jsPsych.getDisplayElement();
-                display.innerHTML = '<div class="sync-message"><h3>データを送信中...</h3><p>ブラウザを閉じないでお待ちください。</p></div>';
+            async function processAndSendData() {
+                const displayElement = jsPsych.getDisplayElement();
+                displayElement.innerHTML = '<div class="loading-msg">データを送信中...<br>ブラウザを閉じないでください。</div>';
 
-                // 分析対象（response）のデータのみ抽出・整形
-                const relevant_data = jsPsych.data.get()
-                    .filter({task: 'response'})
-                    .ignore('stimulus')
-                    .ignore('trial_type')
-                    .ignore('trial_index')
-                    .ignore('internal_node_id')
-                    .values();
+                // 1. 必要な行（response）のみを抽出
+                const rawData = jsPsych.data.get().filter({task: 'response'}).values();
+                
+                // 2. 必要な列のみを抽出・整形
+                const cleanData = rawData.map(trial => ({
+                    subject_id: trial.subject_id,
+                    timestamp: trial.timestamp,
+                    word: trial.word,
+                    color: trial.color,
+                    condition: trial.condition,
+                    rt: trial.rt,
+                    correct: trial.correct // true or false
+                }));
 
-                // 指数バックオフを伴うリトライ関数
-                const upload = async (retries = 5, delay = 1000) => {
+                // 3. 送信実行（指数バックオフ付き）
+                const success = await sendWithRetry(cleanData);
+
+                if (success) {
+                    displayElement.innerHTML = `
+                        <div class="loading-msg">
+                            <p>実験が正常に終了しました。データは保存されました。</p>
+                            <p>ご協力ありがとうございました。</p>
+                        </div>
+                    `;
+                } else {
+                    displayElement.innerHTML = `
+                        <div class="loading-msg" style="color: red;">
+                            <p>データの送信に失敗しました。</p>
+                            <p>お手数ですが、以下のデータをコピーして担当者に送付してください。</p>
+                            <textarea style="width:80%; height:200px;">${JSON.stringify(cleanData)}</textarea>
+                        </div>
+                    `;
+                }
+            }
+
+            /**
+             * 指数バックオフによるリトライ機能
+             */
+            async function sendWithRetry(data, maxRetries = 5) {
+                for (let i = 0; i < maxRetries; i++) {
                     try {
-                        await fetch(GAS_URL, {
+                        const response = await fetch(GAS_URL, {
                             method: "POST",
-                            mode: "no-cors",
+                            mode: "no-cors", // GASへのPOSTは基本no-cors
                             headers: {
                                 "Content-Type": "application/json"
                             },
-                            body: JSON.stringify(relevant_data)
+                            body: JSON.stringify(data)
                         });
-                        
-                        // 成功メッセージ
-                        display.innerHTML = '<div class="sync-message"><h3>実験完了</h3><p>データは正常に保存されました。ご協力ありがとうございました。</p></div>';
+                        // no-corsの場合、中身は確認できないが、エラーが出なければ成功とみなす
+                        return true; 
                     } catch (error) {
-                        if (retries > 0) {
-                            // エラー時に待機時間を倍にしてリトライ
-                            setTimeout(() => upload(retries - 1, delay * 2), delay);
-                        } else {
-                            // 最終的なエラー表示
-                            display.innerHTML = '<div class="sync-message"><h3>エラー</h3><p>データの送信に失敗しました。この画面をスクリーンショットして管理者に連絡してください。</p></div>';
-                            console.error("Upload failed after retries:", error);
+                        console.error(`送信失敗 (試行 ${i + 1}):`, error);
+                        if (i < maxRetries - 1) {
+                            const delay = Math.pow(2, i) * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
                         }
                     }
-                };
-
-                await upload();
+                }
+                return false;
             }
 
             // 実験の実行
