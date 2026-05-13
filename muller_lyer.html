@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Müller-Lyer Illusion Experiment</title>
+    <!-- jsPsych core and plugins -->
+    <script src="https://unpkg.com/jspsych@7.3.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-canvas-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.2"></script>
+    <link href="https://unpkg.com/jspsych@7.3.0/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        body { background-color: #f8fafc; font-family: 'Inter', -apple-system, sans-serif; }
+        canvas { background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .key-hint { display: inline-block; padding: 2px 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-weight: 600; color: #475569; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen m-0 overflow-hidden">
+
+    <script>
+        const jsPsych = initJsPsych();
+        
+        // 新しいGASウェブアプリURLを設定
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjb4WeWSEbkWjILnadfc6bLnucrA5eD8bsX3sXxblS16ACH1_ynHfDAqXsPNMQuzHT/exec';
+
+        const CONFIG = {
+            std_length: 200,
+            canvas_width: 600,
+            canvas_height: 500,
+            step: 1.5,
+            x_center: 300,
+            top_y: 160,
+            bottom_y: 340,
+            total_trials: 12
+        };
+
+        function drawMullerLyer(ctx, x, y, length, wingLen, angle, isInward) {
+            const rad = angle * (Math.PI / 180);
+            const halfLen = length / 2;
+            ctx.beginPath();
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.moveTo(x - halfLen, y);
+            ctx.lineTo(x + halfLen, y);
+            [ -1, 1 ].forEach(side => {
+                const startX = x + (side * halfLen);
+                const directionMultiplier = isInward ? -side : side;
+                ctx.moveTo(startX, y);
+                ctx.lineTo(startX + (directionMultiplier * wingLen * Math.cos(rad)), y - (wingLen * Math.sin(rad)));
+                ctx.moveTo(startX, y);
+                ctx.lineTo(startX + (directionMultiplier * wingLen * Math.cos(rad)), y + (wingLen * Math.sin(rad)));
+            });
+            ctx.stroke();
+        }
+
+        const timeline = [];
+
+        timeline.push({
+            type: jsPsychSurveyText,
+            questions: [{prompt: '<span class="text-xl font-bold text-slate-700">参加者IDを入力してください</span>', name: 'subject_id', required: true}],
+            button_label: '次へ',
+            on_finish: function(data) {
+                jsPsych.data.addProperties({ subject_id: data.response.subject_id });
+            }
+        });
+
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `<div class="max-w-xl text-left bg-white p-10 rounded-2xl shadow-xl border border-slate-100">
+                <h2 class="text-2xl font-bold text-blue-600 mb-6 text-center">ミュラー・リヤー錯視実験</h2>
+                <p class="mb-4 leading-relaxed">画面に上下2つの線が表示されます。</p>
+                <p class="mb-6 leading-relaxed">上の線と同じ長さに見えるように、下の線の長さを左右キーで調整してください。</p>
+                <div class="bg-blue-50 p-6 rounded-xl mb-8 border-l-4 border-blue-500">
+                    <p class="text-slate-700 mb-2"><span class="key-hint">→</span> キー：下の線を長くする</p>
+                    <p class="text-slate-700 mb-4"><span class="key-hint">←</span> キー：下の線を短くする</p>
+                </div>
+                <p class="text-center font-semibold text-slate-600">納得のいく長さになったら <span class="key-hint">Space</span> で確定します。</p>
+            </div>`
+        });
+
+        const adjustment_trial = {
+            type: jsPsychCanvasKeyboardResponse,
+            canvas_size: [CONFIG.canvas_height, CONFIG.canvas_width],
+            stimulus: function(canvas) {
+                const ctx = canvas.getContext('2d');
+                const start_len = jsPsych.timelineVariable('start_length');
+                const w_len = jsPsych.timelineVariable('wing_length');
+                const w_ang = jsPsych.timelineVariable('wing_angle');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawMullerLyer(ctx, CONFIG.x_center, CONFIG.top_y, CONFIG.std_length, w_len, w_ang, true);
+                drawMullerLyer(ctx, CONFIG.x_center, CONFIG.bottom_y, start_len, w_len, w_ang, false);
+            },
+            choices: [' '],
+            prompt: function() {
+                const current_trial_num = jsPsych.data.get().filter({trial_type: 'canvas-keyboard-response'}).count() + 1;
+                return `<div class="mt-8 text-center">
+                    <div class="text-sm font-bold text-blue-500 tracking-widest uppercase mb-4">Trial ${current_trial_num} / ${CONFIG.total_trials}</div>
+                    <div class="text-slate-600 flex items-center justify-center gap-6">
+                        <span><span class="key-hint">←</span> <span class="key-hint">→</span> 調整</span>
+                        <span><span class="key-hint">Space</span> 確定</span>
+                    </div>
+                </div>`;
+            },
+            on_load: function() {
+                const canvas = document.querySelector('canvas');
+                const ctx = canvas.getContext('2d');
+                const wingLen = jsPsych.timelineVariable('wing_length');
+                const wingAngle = jsPsych.timelineVariable('wing_angle');
+                let current_length = jsPsych.timelineVariable('start_length');
+                let keys_pressed = {};
+                let animation_id;
+
+                function renderFrame() {
+                    let needsRedraw = false;
+                    if (keys_pressed['ArrowRight']) { current_length += CONFIG.step; needsRedraw = true; }
+                    if (keys_pressed['ArrowLeft']) { current_length -= CONFIG.step; needsRedraw = true; }
+                    if (needsRedraw || !animation_id) {
+                        if (current_length < 10) current_length = 10;
+                        if (current_length > CONFIG.canvas_width - 20) current_length = CONFIG.canvas_width - 20;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        drawMullerLyer(ctx, CONFIG.x_center, CONFIG.top_y, CONFIG.std_length, wingLen, wingAngle, true);
+                        drawMullerLyer(ctx, CONFIG.x_center, CONFIG.bottom_y, current_length, wingLen, wingAngle, false);
+                        jsPsych.getCurrentTrial().final_val = current_length;
+                    }
+                    animation_id = requestAnimationFrame(renderFrame);
+                }
+
+                const handleKeyDown = (e) => { 
+                    keys_pressed[e.key] = true;
+                    if(['ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+                };
+                const handleKeyUp = (e) => { keys_pressed[e.key] = false; };
+                window.addEventListener('keydown', handleKeyDown);
+                window.addEventListener('keyup', handleKeyUp);
+                jsPsych.getCurrentTrial().final_val = current_length;
+                animation_id = requestAnimationFrame(renderFrame);
+                jsPsych.getCurrentTrial().cleanup = () => {
+                    cancelAnimationFrame(animation_id);
+                    window.removeEventListener('keydown', handleKeyDown);
+                    window.removeEventListener('keyup', handleKeyUp);
+                };
+            },
+            on_finish: function(data) {
+                if (this.cleanup) this.cleanup();
+                data.timestamp = new Date().toISOString();
+                data.angle = jsPsych.timelineVariable('wing_angle');
+                data.wing_length = jsPsych.timelineVariable('wing_length');
+                data.standard_len = CONFIG.std_length;
+                data.pse = this.final_val;
+                data.error_amount = this.final_val - CONFIG.std_length;
+            }
+        };
+
+        const conditions = [
+            { wing_angle: 15, wing_length: 20 },
+            { wing_angle: 15, wing_length: 50 },
+            { wing_angle: 75, wing_length: 20 },
+            { wing_angle: 75, wing_length: 50 }
+        ];
+        const trial_vars = jsPsych.randomization.repeat(conditions, 3).map(c => ({
+            ...c,
+            start_length: Math.floor(Math.random() * 201) + 100
+        }));
+
+        timeline.push({ timeline: [adjustment_trial], timeline_variables: trial_vars });
+
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `<div class="text-center">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4"></div>
+                <p class="text-xl font-bold text-slate-600">データを送信中...</p>
+            </div>`,
+            choices: "NO_KEYS",
+            on_load: function() {
+                const experiment_data = jsPsych.data.get()
+                    .filter({trial_type: 'canvas-keyboard-response'})
+                    .values()
+                    .map(d => ({
+                        subject_id: d.subject_id,
+                        timestamp: d.timestamp,
+                        angle: d.angle,
+                        wing_length: d.wing_length,
+                        standard_len: d.standard_len,
+                        pse: d.pse,
+                        error_amount: d.error_amount
+                    }));
+
+                fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // CORSエラー回避のため
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(experiment_data)
+                })
+                .then(() => {
+                    setTimeout(() => jsPsych.finishTrial(), 1500);
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    setTimeout(() => jsPsych.finishTrial(), 1500);
+                });
+            }
+        });
+
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `<div class="text-center bg-white p-12 rounded-3xl shadow-2xl border border-emerald-50">
+                <h2 class="text-3xl font-bold text-slate-800 mb-4">実験終了</h2>
+                <p class="text-slate-500 mb-8 text-lg">データの保存が完了しました。ご協力ありがとうございました。</p>
+            </div>`,
+            choices: "NO_KEYS"
+        });
+
+        jsPsych.run(timeline);
+    </script>
+</body>
+</html>
