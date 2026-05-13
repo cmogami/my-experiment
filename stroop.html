@@ -35,6 +35,19 @@
             font-size: 60px;
             font-weight: bold;
         }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 10px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -42,7 +55,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const gasUrl = "https://script.google.com/macros/s/AKfycbyPywGyPutJp4AiM6yxv3aaRtM0DoyC6kM1zKHhKxNfnk7scOnWdKmk41t5sQNi2e1Wmg/exec";
+            // GASのWebアプリURL（最新のデプロイIDであることを確認してください）
+            const gasUrl = "https://script.google.com/macros/s/AKfycbyu9yv8-qk-JtD9MKXJ62ObB20dupNqoIrIL1mcJ1aA5bSl1eBGFK1bng_5qie8TcyP/exec";
 
             const jsPsych = initJsPsych({
                 display_element: 'jspsych-target',
@@ -53,7 +67,7 @@
 
             const timeline = [];
 
-            // 1. 参加者ID入力画面
+            // 1. 参加者ID入力
             const participant_id_screen = {
                 type: jsPsychSurveyText,
                 questions: [
@@ -61,16 +75,15 @@
                 ],
                 button_label: "次へ",
                 on_finish: function(data) {
-                    // 入力されたIDをグローバルなデータプロパティとして保持
                     jsPsych.data.addProperties({
                         subject_id: data.response.ParticipantID,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toLocaleString("ja-JP")
                     });
                 }
             };
             timeline.push(participant_id_screen);
 
-            // 2. 教示画面
+            // 2. 教示
             const instructions = {
                 type: jsPsychHtmlKeyboardResponse,
                 stimulus: `
@@ -88,7 +101,7 @@
             };
             timeline.push(instructions);
 
-            // 3. 刺激の定義
+            // 3. 刺激定義
             const stimuli_pool = [
                 { text: "赤", color: "red", condition: "congruent", correct_key: "r" },
                 { text: "青", color: "blue", condition: "congruent", correct_key: "b" },
@@ -110,7 +123,7 @@
                 data: { task: 'fixation' }
             };
 
-            // 5. 刺激提示
+            // 5. 試行
             const test_trial = {
                 type: jsPsychHtmlKeyboardResponse,
                 stimulus: function() {
@@ -127,12 +140,11 @@
                     correct_response: jsPsych.timelineVariable('correct_key')
                 },
                 on_finish: function(data) {
-                    // 正解判定を確実に文字列/Booleanで記録
                     data.correct = (data.response === data.correct_response) ? "true" : "false";
                 }
             };
 
-            // 6. メイン手続き (10試行)
+            // 6. 手続き
             const main_procedure = {
                 timeline: [fixation, test_trial],
                 timeline_variables: stimuli_pool,
@@ -145,70 +157,77 @@
             timeline.push(main_procedure);
 
             /**
-             * GASへのデータ送信関数 (指数バックオフ付き)
+             * GASへのデータ送信（Form Data形式を利用してCORS制限を回避）
              */
             async function sendDataToGas() {
                 const displayElement = jsPsych.getDisplayElement();
-                displayElement.innerHTML = '<div style="text-align:center;"><p>データを送信中...</p></div>';
+                displayElement.innerHTML = `
+                    <div style="text-align:center;">
+                        <p>データを送信しています。しばらくお待ちください...</p>
+                        <div class="spinner"></div>
+                    </div>
+                `;
 
-                // 必要なデータのみを抽出・整形
-                const relevantData = jsPsych.data.get().filter({task: 'response'}).values().map(trial => {
-                    return {
-                        subject_id: trial.subject_id,
-                        timestamp: trial.timestamp,
-                        word: trial.word,
-                        color: trial.color,
-                        condition: trial.condition,
-                        rt: trial.rt,
-                        correct: trial.correct
-                    };
-                });
+                const allData = jsPsych.data.get().filter({task: 'response'}).values();
+                const cleanData = allData.map(trial => ({
+                    subject_id: trial.subject_id,
+                    timestamp: trial.timestamp,
+                    word: trial.word,
+                    color: trial.color,
+                    condition: trial.condition,
+                    rt: Math.round(trial.rt),
+                    correct: trial.correct
+                }));
 
-                const fetchWithRetry = async (url, payload, retries = 5, backoff = 1000) => {
-                    try {
-                        // mode: 'no-cors' の場合、レスポンスの内容は読み取れず response.ok は常に false になることがあるため、
-                        // 送信自体が成功した（例外が飛ばなかった）ことをもって成功とみなす調整を行います。
-                        await fetch(url, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        });
-                        return true;
-                    } catch (error) {
-                        if (retries <= 0) throw error;
-                        await new Promise(resolve => setTimeout(resolve, backoff));
-                        return fetchWithRetry(url, payload, retries - 1, backoff * 2);
+                // JSONを文字列にして URLSearchParams に詰め込む
+                // これにより GAS 側で e.parameter.payload として受け取れるようになる
+                const formData = new URLSearchParams();
+                formData.append('payload', JSON.stringify(cleanData));
+
+                const fetchWithRetry = async (url, body, retries = 5, delay = 1000) => {
+                    for (let i = 0; i < retries; i++) {
+                        try {
+                            await fetch(url, {
+                                method: 'POST',
+                                mode: 'no-cors', // 重要
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                                },
+                                body: body.toString()
+                            });
+                            // no-cors の場合、エラーが出なければ成功と判断する
+                            return true;
+                        } catch (err) {
+                            if (i === retries - 1) throw err;
+                            await new Promise(res => setTimeout(res, delay));
+                            delay *= 2;
+                        }
                     }
                 };
 
                 try {
-                    await fetchWithRetry(gasUrl, relevantData);
-
+                    await fetchWithRetry(gasUrl, formData);
+                    
                     displayElement.innerHTML = `
                         <div style="text-align:center;">
-                            <h3>実験が完了しました</h3>
-                            <p>データ送信リクエストを完了しました。</p>
+                            <h3>データ送信リクエストを完了しました</h3>
+                            <p>サーバー側の処理には数秒かかる場合があります。スプレッドシートを確認してください。</p>
                             <p>ご協力ありがとうございました。</p>
-                            <p>このウィンドウを閉じても構いません。</p>
+                            <br>
+                            <button onclick="window.close()" style="padding: 10px 20px; cursor: pointer;">終了する</button>
                         </div>
                     `;
                 } catch (error) {
-                    console.error('Final Error:', error);
                     displayElement.innerHTML = `
-                        <div style="text-align:center; color: red;">
-                            <h3>送信エラーが発生しました</h3>
-                            <p>インターネット接続を確認してください。</p>
-                            <p>お手数ですが、以下のデータをコピーして管理者に連絡してください。</p>
-                            <textarea style="width:80%; height:200px;">${JSON.stringify(relevantData)}</textarea>
+                        <div style="text-align:center; color: #D32F2F;">
+                            <h3>送信エラー</h3>
+                            <p>自動送信に失敗しました。以下の内容をコピーして保存してください：</p>
+                            <textarea readonly style="width:90%; height:200px;">${JSON.stringify(cleanData)}</textarea>
                         </div>
                     `;
                 }
             }
 
-            // 実験の実行
             jsPsych.run(timeline);
         });
     </script>
