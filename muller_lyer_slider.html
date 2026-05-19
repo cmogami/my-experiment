@@ -84,16 +84,31 @@
             aspect-ratio: 500 / 300;  /* アスペクト比を5:3で固定 */
         }
 
-        /* カスタムスライダースタイル (スマホの指でも操作しやすいように高さを調整) */
-        .jspsych-sliders-response-container {
+        /* カスタムスライダースタイル (スマホの指でも操作しやすいように高さを調整し、画面中央に収める) */
+        .jspsych-sliders-response-container,
+        .jspsych-canvas-slider-response-container {
             width: 100% !important;
-            max-width: 500px !important;
+            max-width: 100% !important;
             margin-bottom: 1.25rem !important;
+            box-sizing: border-box !important;
+            padding: 0 1rem !important; /* スマホ画面端からの安全なマージンを確保 */
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+        }
+
+        @media (min-width: 640px) {
+            .jspsych-sliders-response-container,
+            .jspsych-canvas-slider-response-container {
+                max-width: 500px !important; /* PCでは最大500pxの幅に制限 */
+            }
         }
 
         input[type=range] {
             -webkit-appearance: none;
-            width: 100%;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
             height: 10px; /* 少し太くしてタッチしやすく */
             border-radius: 9999px;
             background: #e5e7eb;
@@ -296,7 +311,7 @@
                 <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl max-w-xl text-left border border-gray-100 mx-4 my-4">
                     <h1 class="text-2xl font-bold text-gray-800 mb-4 sm:mb-6 text-center border-b pb-4">ミュラー・リヤー錯視実験</h1>
                     <div class="space-y-4 text-gray-600 leading-relaxed text-sm">
-                        <p>この実験では、線の長さが周囲の矢羽（はね）によってどのように違って見えるかを測定します。</p>
+                        <p>この実験では、線の長さが周囲 of 矢羽（はね）によってどのように違って見えるかを測定します。</p>
                         
                         <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
                             <h3 class="font-bold text-blue-800 mb-1">操作手順：</h3>
