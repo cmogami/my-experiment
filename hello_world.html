@@ -15,7 +15,7 @@
     :root {
       --primary-color: #4da8da;      /* メインの水色 */
       --primary-light: #e6f4f8;      /* 背景用の極めて薄い水色 */
-      --primary-dark: #1c7293;       /* アクセント・文字用の濃い青 */
+      --primary-dark: #1c7293;      /* アクセント・文字用の濃い青 */
       --text-color: #334e5a;         /* メインのテキスト（コントラストを考慮したソフトな紺/グレー） */
       --text-muted: #627d98;         /* 補足情報のテキスト */
       --bg-gradient: linear-gradient(135deg, #f0f8ff 0%, #e6f4f8 100%); /* ヘッダー等のグラデーション */
@@ -276,7 +276,7 @@
       font-weight: 500;
     }
 
-    /* アクションボタン（カード内、aタグの入れ子回避のためにspanで実装） */
+    /* アクションボタン（カード内） */
     .card-button {
       background-color: var(--primary-color);
       color: white;
@@ -415,10 +415,10 @@
               <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
               所要時間：すぐ
             </div>
-            <span class="card-button">
+            <button class="card-button" type="button">
               <span>Hello Worldを見る</span>
               <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-            </span>
+            </button>
           </a>
 
           <!-- 実験1: ストループ課題 -->
@@ -429,16 +429,16 @@
             </div>
             <h3 class="card-title">実験1：ストループ課題</h3>
             <p class="card-description">
-              「文字の意味」と「文字の色」が一致しない時に起こる干渉を調べる、簡単なキーボード入力 of テストです。
+              「文字の意味」と「文字の色」が一致しない時に起こる干渉を調べる、簡単なキーボード入力のテストです。
             </p>
             <div class="time-tag">
               <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
               所要時間：約3分
             </div>
-            <span class="card-button">
+            <button class="card-button" type="button">
               <span>実験1に参加する</span>
               <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-            </span>
+            </button>
           </a>
 
           <!-- 実験2: ミュラー・リヤー錯視 -->
@@ -455,7 +455,7 @@
               <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
               所要時間：約2分
             </div>
-            <span class="card-button">
+            <button class="card-button" type="button">
               <span>実験2に参加する</span>
               <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
             </button>
@@ -475,10 +475,10 @@
               <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
               所要時間：約3分
             </div>
-            <span class="card-button">
+            <button class="card-button" type="button">
               <span>実験3に参加する</span>
               <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-            </span>
+            </button>
           </a>
 
         </div>
