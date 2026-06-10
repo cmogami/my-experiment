@@ -260,7 +260,7 @@
     .card-description {
       font-size: 0.95rem;
       color: var(--text-color);
-      margin-bottom: auto; /* ボタンを常にカードの最下部に配置 */
+      margin-bottom: auto; /* ボタン配置エリアを常にカードの最下部に押し出す */
       line-height: 1.6;
     }
 
@@ -276,7 +276,15 @@
       font-weight: 500;
     }
 
-    /* アクションボタン（カード内） */
+    /* ボタンエリアのコンテナ（複数のボタンを綺麗に配置するため） */
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+
+    /* アクションボタン（メイン） */
     .card-button {
       background-color: var(--primary-color);
       color: white;
@@ -292,6 +300,7 @@
       gap: 8px;
       transition: var(--transition);
       box-shadow: 0 4px 12px rgba(77, 168, 218, 0.2);
+      text-decoration: none;
     }
 
     .experiment-card:hover .card-button {
@@ -305,6 +314,54 @@
 
     .experiment-card:hover .card-button i {
       transform: translateX(4px);
+    }
+
+    /* プレレジストレーション用サブボタン（アウトライン・白抜き） */
+    .sub-button-outline {
+      background-color: transparent;
+      color: var(--primary-dark);
+      border: 2px solid var(--primary-color);
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+
+    .sub-button-outline:hover {
+      background-color: var(--primary-light);
+      border-color: var(--primary-dark);
+      color: var(--primary-dark);
+    }
+
+    /* 変更履歴用ライトボタン（さらに控えめなデザイン） */
+    .sub-button-text {
+      background-color: #f1f5f9;
+      color: var(--text-muted);
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+
+    .sub-button-text:hover {
+      background-color: #e2e8f0;
+      color: var(--text-color);
+      border-color: #94a3b8;
     }
 
     /* フッター */
@@ -415,10 +472,12 @@
               <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
               所要時間：すぐ
             </div>
-            <button class="card-button" type="button">
-              <span>Hello Worldを見る</span>
-              <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-            </button>
+            <div class="button-group">
+              <button class="card-button" type="button">
+                <span>Hello Worldを見る</span>
+                <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+              </button>
+            </div>
           </a>
 
           <!-- 実験1: ストループ課題 -->
@@ -435,10 +494,12 @@
               <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
               所要時間：約3分
             </div>
-            <button class="card-button" type="button">
-              <span>実験1に参加する</span>
-              <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-            </button>
+            <div class="button-group">
+              <button class="card-button" type="button">
+                <span>実験1に参加する</span>
+                <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+              </button>
+            </div>
           </a>
 
           <!-- 実験2: ミュラー・リヤー錯視 -->
@@ -455,14 +516,17 @@
               <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
               所要時間：約2分
             </div>
-            <button class="card-button" type="button">
-              <span>実験2に参加する</span>
-              <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-            </button>
+            <div class="button-group">
+              <button class="card-button" type="button">
+                <span>実験2に参加する</span>
+                <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+              </button>
+            </div>
           </a>
 
-          <!-- 実験3: N-Back課題 -->
-          <a href="nback.html" class="experiment-card">
+          <!-- 実験3: N-Back課題（プレレジストレーション リンク追加版） -->
+          <!-- カード全体への a タグリンクを外し、div に変更して、中の各ボタン・リンクが正しく個別に機能するようにしました -->
+          <div class="experiment-card" style="cursor: default;">
             <span class="card-badge">実験3</span>
             <div class="card-icon">
               <i data-lucide="brain" style="width: 28px; height: 28px;"></i>
@@ -471,15 +535,32 @@
             <p class="card-description">
               今見ている文字が「n回前」に表示された文字と同じかどうかを判断し、解答します。
             </p>
-            <div class="time-tag">
+            <div class="time-tag" style="margin-bottom: 15px;">
               <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
               所要時間：約3分
             </div>
-            <button class="card-button" type="button">
-              <span>実験3に参加する</span>
-              <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-            </button>
-          </a>
+            
+            <!-- 役割に応じて調整した3つのボタンエリア -->
+            <div class="button-group">
+              <!-- メイン：実験に参加するボタン（最も強調） -->
+              <a href="nback.html" class="card-button">
+                <span>実験3に参加する</span>
+                <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+              </a>
+              
+              <!-- サブ1：プレレジストレーション確認用（透明感のある白抜きデザイン） -->
+              <a href="https://github.com/cmogami/my-experiment/blob/main/preregistration.md" target="_blank" rel="noopener noreferrer" class="sub-button-outline">
+                <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
+                <span>プレレジを確認する</span>
+              </a>
+              
+              <!-- サブ2：タイムスタンプ証明用（さらに控えめでノイズにならないグレーデザイン） -->
+              <a href="https://github.com/cmogami/my-experiment/commits/main/preregistration.md" target="_blank" rel="noopener noreferrer" class="sub-button-text">
+                <i data-lucide="history" style="width: 14px; height: 14px;"></i>
+                <span>変更履歴（証拠）を確認する</span>
+              </a>
+            </div>
+          </div>
 
         </div>
       </div>
