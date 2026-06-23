@@ -90,9 +90,9 @@
 
   <script>
     // ----------------------------------------------------
-    // GAS送信用のエンドポイント設定（指定のURLに変更済み）
+    // GAS送信用のエンドポイント設定（指定のURL）
     // ----------------------------------------------------
-    const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzbLx8Yb79v1vULc2XKngmBGL2CsFMD5YDBSImjkd6sZlJM1TZUGswztADXBCiObss8/exec";
+    const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyRRKtEko0RWmniwiKynOMah58XCZij2iNkugp4HGK6z-Q0V5kNdaMnYiqW27sjR9Mi/exec";
 
     // ----------------------------------------------------
     // 1. 実験初期設定・グループ割り当て
@@ -100,7 +100,7 @@
     const jsPsych = initJsPsych({
       display_element: 'jspsych-target',
       on_finish: function() {
-        // 実験終了時にスプレッドシートへ自動送信し、完了画面を出す
+        // 実験終了時にスプレッドシートへ自動送信
         sendDataToGAS(jsPsych.data.get());
       }
     });
@@ -109,7 +109,7 @@
     const group = Math.floor(Math.random() * 2);
     const groupName = group === 0 ? "条件1（A→B順）" : "条件2（B→A順）";
     
-    // 参加者のシステム管理用一意IDを生成（万一学籍番号に重複があった場合の保険）
+    // 参加者のシステム管理用一意IDを生成
     const systemId = 'SYS_' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
     // 共通データにグループとシステムIDを初期保存
@@ -124,7 +124,7 @@
     // 2. 質問文の定義
     // ----------------------------------------------------
     
-    // 練習問題（身近でニュートラルなもの）
+    // 練習問題
     const practice_questions = [
       {
         question: "あなたは、大学の講義においてオンライン講義（オンデマンド型など）よりも、教室での対面講義の方が好きですか？",
@@ -433,7 +433,7 @@
     jsPsych.run(timeline);
 
     // ----------------------------------------------------
-    // 7. GASへのデータ送信処理とリトライ機能（指数バックオフ）
+    // 7. GASへのデータ送信処理（2ペアに分解して2行で送信）
     // ----------------------------------------------------
     async function sendDataToGAS(data) {
       const targetDiv = document.getElementById('jspsych-target');
@@ -446,48 +446,67 @@
         </div>
       `;
 
+      // 共通データの抽出
       const studentId = data.select('student_id').values[0] || "N/A";
       const age = data.select('age').values[0] || "N/A";
       const gender = data.select('gender').values[0] || "N/A";
+      const condition = group === 0 ? "A-B" : "B-A";
 
-      const testTrials = data.filter([{trial_type_detail: 'test'}, {question_id: 'comprehension_check'}]);
-      let isCheckCorrect = "UNKNOWN";
+      // 総回答時間の計算（ミリ秒から秒へ変換）
+      const totalTimeSec = Math.round(data.select('rt').sum() / 1000);
 
+      // 理解度チェック
       const checkTrial = data.filter({question_id: 'comprehension_check'}).values()[0];
-      if (checkTrial) {
-        isCheckCorrect = checkTrial.correct ? "CORRECT" : "INCORRECT";
-      }
+      const isCheckCorrect = checkTrial ? (checkTrial.correct ? "CORRECT" : "INCORRECT") : "UNKNOWN";
 
-      const payload = testTrials.values().map(t => {
-        return {
-          system_id: t.system_id,
+      // 各ターゲット試行の抽出と回答マッピング
+      const getTrialData = (qId) => {
+        const tr = data.filter({question_id: qId}).values()[0];
+        return tr ? { res: tr.response_label, rt: Math.round(tr.rt) } : { res: "", rt: "" };
+      };
+
+      const t1_A = getTrialData("target1_A_venture");
+      const t1_B = getTrialData("target1_B_major");
+      const t2_A = getTrialData("target2_A_time");
+      const t2_B = getTrialData("target2_B_money");
+
+      // スプレッドシートの1行ずつの構造に対応させるためのペイロード（2行分）
+      const payload = [
+        {
+          category: "企業",
+          condition: condition,
+          response_A: t1_A.res,
+          response_B: t1_B.res,
+          rt_A: t1_A.rt,
+          rt_B: t1_B.rt,
+          comprehension_check: isCheckCorrect,
           student_id: studentId,
           age: age,
           gender: gender,
-          assigned_group: t.assigned_group,
-          trial_type_detail: t.trial_type_detail || "check",
-          question_id: t.question_id,
-          question_category: t.question_category || "none",
-          response_index: t.response,
-          response_text: t.response_label || (t.response === 1 ? "Option2" : "Option1"),
-          rt: Math.round(t.rt),
+          rt_total: totalTimeSec
+        },
+        {
+          category: "ライフスタイル",
+          condition: condition,
+          response_A: t2_A.res,
+          response_B: t2_B.res,
+          rt_A: t2_A.rt,
+          rt_B: t2_B.rt,
           comprehension_check: isCheckCorrect,
-          timestamp: new Date().toISOString()
-        };
-      });
+          student_id: studentId,
+          age: age,
+          gender: gender,
+          rt_total: totalTimeSec
+        }
+      ];
 
       // 通信リトライ関数（最大5回指数バックオフ）
       const fetchWithRetry = async (url, options, retries = 5, delay = 1000) => {
         try {
           const response = await fetch(url, options);
-          
-          // mode: 'no-cors' または不透明なレスポンス（opaque）の場合は、
-          // CORSによるダミーレスポンス（status: 0, ok: false）になるため、
-          // エラーチェックを行わずにそのまま正常終了として扱います。
           if (options.mode === 'no-cors' || response.type === 'opaque') {
             return { result: "opaque_success" };
           }
-          
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           return await response.json();
         } catch (error) {
@@ -501,8 +520,7 @@
       };
 
       try {
-        // modeを 'no-cors' に変更して、ブラウザ側CORSポリシーによる
-        // Googleリダイレクトのブロック（Load failedエラー）を完全に防止します。
+        // CORS回避の 'no-cors' モードで送信を完全防護
         await fetchWithRetry(GAS_WEBAPP_URL, {
           method: 'POST',
           mode: 'no-cors',
@@ -512,10 +530,10 @@
           body: JSON.stringify(payload)
         });
         
-        showSuccessScreen(studentId, groupName, isCheckCorrect, data);
+        showSuccessScreen(studentId, groupName, isCheckCorrect, payload);
       } catch (error) {
         console.error("データの送信に失敗しました:", error);
-        showFailureScreen(studentId, groupName, isCheckCorrect, data);
+        showFailureScreen(studentId, groupName, isCheckCorrect, payload);
       }
     }
 
@@ -523,9 +541,9 @@
     // 8. 終了画面のレンダリング
     // ----------------------------------------------------
 
-    function showSuccessScreen(id, group, checkResult, fullData) {
+    function showSuccessScreen(id, group, checkResult, formattedPayload) {
       const targetDiv = document.getElementById('jspsych-target');
-      const csvUri = generateCsvUri(fullData);
+      const csvUri = generateCsvUri(formattedPayload);
 
       targetDiv.innerHTML = `
         <div class="experiment-card text-center">
@@ -533,12 +551,10 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <h1 class="text-3xl font-bold mb-2 text-slate-800">実験データ保存完了！</h1>
-          <p class="text-slate-500 mb-6">スプレッドシートへのデータ送信が完了しました。ご協力ありがとうございました。</p>
+          <p class="text-slate-500 mb-6">スプレッドシートへのデータ送信が正常に完了しました。ご協力ありがとうございました。</p>
           
           <div class="bg-slate-50 p-4 rounded-lg text-left text-xs text-slate-600 mb-6 space-y-1 border border-slate-100">
             <p><strong>学籍番号:</strong> ${id}</p>
-            <p><strong>年齢:</strong> ${fullData.select('age').values[0] || "N/A"}</p>
-            <p><strong>性別:</strong> ${fullData.select('gender').values[0] || "N/A"}</p>
             <p><strong>割り当て条件:</strong> ${group}</p>
             <p><strong>教示理解チェック:</strong> <span class="${checkResult === 'CORRECT' ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}">${checkResult}</span></p>
           </div>
@@ -554,9 +570,9 @@
       `;
     }
 
-    function showFailureScreen(id, group, checkResult, fullData) {
+    function showFailureScreen(id, group, checkResult, formattedPayload) {
       const targetDiv = document.getElementById('jspsych-target');
-      const csvUri = generateCsvUri(fullData);
+      const csvUri = generateCsvUri(formattedPayload);
 
       targetDiv.innerHTML = `
         <div class="experiment-card text-center">
@@ -564,11 +580,11 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <h1 class="text-3xl font-bold mb-2 text-slate-800">通信エラーが発生しました</h1>
-          <p class="text-red-500 text-sm mb-6">スプレッドシートへの自動送信中にネットワーク接続エラーが起きた可能性があります。</p>
+          <p class="text-red-500 text-sm mb-6">ネットワーク接続環境の乱れにより、自動保存に失敗した可能性があります。</p>
           
           <div class="bg-amber-50 p-4 rounded-lg text-left text-xs text-amber-800 mb-6 border border-amber-200">
             <p class="font-bold mb-1">【実験参加者の方へのお願い】</p>
-            <p>大変お手数ですが、以下のボタンをクリックして<strong>CSVデータファイルをダウンロード</strong>し、実験責任者にこのファイル（またはスクリーンショット）を提出してください。</p>
+            <p>大変お手数ですが、以下のボタンをクリックして<strong>CSVデータファイルをダウンロード</strong>し、実験責任者（最上）にこのファイルを提出してください。</p>
           </div>
 
           <div class="bg-slate-50 p-4 rounded-lg text-left text-xs text-slate-600 mb-6 space-y-1 border border-slate-100">
@@ -584,41 +600,31 @@
       `;
     }
 
-    function generateCsvUri(data) {
+    // 整形済みのスプレッドシート用配列からCSVを動的生成する
+    function generateCsvUri(payloadArray) {
       let csvRows = [
-        ["SystemID", "StudentID", "Age", "Gender", "Group", "TrialType", "QuestionID", "QuestionCategory", "ResponseIndex", "ResponseText", "ResponseTime_ms", "ComprehensionCheck"]
+        ["Category", "Condition", "Response_A", "Response_B", "Pattern", "RT_A", "RT_B", "ComprehensionCheck", "StudentID", "Age", "Gender", "TotalTime_sec"]
       ];
 
-      const studentId = data.select('student_id').values[0] || "N/A";
-      const age = data.select('age').values[0] || "N/A";
-      const gender = data.select('gender').values[0] || "N/A";
-
-      const trials = data.filter([{trial_type_detail: 'test'}, {question_id: 'comprehension_check'}]);
-      let isCheckCorrect = "UNKNOWN";
-
-      const checkTrial = data.filter({question_id: 'comprehension_check'}).values()[0];
-      if (checkTrial) {
-        isCheckCorrect = checkTrial.correct ? "CORRECT" : "INCORRECT";
-      }
-
-      trials.values().forEach(t => {
+      payloadArray.forEach(item => {
+        const pattern = `${item.response_A}-${item.response_B}`;
         csvRows.push([
-          t.system_id,
-          studentId,
-          age,
-          gender,
-          t.assigned_group,
-          t.trial_type_detail || "check",
-          t.question_id,
-          t.question_category || "none",
-          t.response,
-          t.response_label || (t.response === 1 ? "Option2" : "Option1"),
-          Math.round(t.rt),
-          isCheckCorrect
+          item.category,
+          item.condition,
+          item.response_A,
+          item.response_B,
+          pattern,
+          item.rt_A,
+          item.rt_B,
+          item.comprehension_check,
+          item.student_id,
+          item.age,
+          item.gender,
+          item.rt_total
         ]);
       });
 
-      const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+      const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); // Excelでの文字化け防止BOM
       const csvContent = csvRows.map(e => e.map(val => `"${val}"`).join(",")).join("\n");
       const blob = new Blob([bom, csvContent], { type: "text/csv;charset=utf-8;" });
       
