@@ -46,24 +46,6 @@
       margin: 1.5rem auto;
       text-align: left;
     }
-    /* 選択肢ボタンのスマホ・マルチデバイス表示最適化 */
-    .check-btn {
-      padding: 1rem 1.25rem !important;
-      font-size: 0.95rem !important;
-      font-weight: 500 !important;
-      text-align: left !important;
-      line-height: 1.5 !important;
-      white-space: normal !important; /* 改行を許可する */
-      width: 100% !important;
-      box-shadow: none !important;
-      display: block !important;
-      border-radius: 0.5rem !important;
-      transform: none !important;
-    }
-    .check-btn:hover {
-      transform: none !important;
-      background-color: #f1f5f9 !important;
-    }
     .btn-yes {
       background-color: #3b82f6 !important;
       color: white !important;
@@ -108,7 +90,7 @@
 
   <script>
     // ----------------------------------------------------
-    // GAS送信用のエンドポイント設定（新しいURLに変更済み）
+    // GAS送信用のエンドポイント設定
     // ----------------------------------------------------
     const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyRRKtEko0RWmniwiKynOMah58XCZij2iNkugp4HGK6z-Q0V5kNdaMnYiqW27sjR9Mi/exec";
 
@@ -121,7 +103,7 @@
     const jsPsych = initJsPsych({
       display_element: 'jspsych-target',
       on_finish: function() {
-        // 実験終了時にスプレッドシートへ自動送信し、完了画面を出す
+        // 実験終了時（理解度チェックを送信ボタンで終えた瞬間）にスプレッドシートへ自動送信
         sendDataToGAS(jsPsych.data.get());
       }
     });
@@ -354,64 +336,63 @@
     }
 
     // ----------------------------------------------------
-    // 5. 理解度チェック
+    // 5. 理解度チェック 兼 送信トリガー画面
     // ----------------------------------------------------
     const check_trial = {
       type: jsPsychHtmlButtonResponse,
       stimulus: `
         <div class="experiment-card">
           <h1 class="text-xl font-bold mb-4 text-slate-800 border-b pb-2">最後に確認の質問です</h1>
-          <p class="mb-6 leading-relaxed text-slate-600">
+          <p class="mb-6 leading-relaxed text-slate-600 text-sm">
             今回の本番課題に回答する際、あなたに対してあらかじめ伝えられていた「回答のルール」として最も当てはまるものを、以下から1つ選んでください。
           </p>
+          <div class="space-y-3 mb-6">
+            <label class="flex items-start p-4 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-all">
+              <input type="radio" name="rule_check" value="0" class="mt-1 mr-3 h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500">
+              <span class="text-sm font-medium text-slate-700 leading-normal">できるだけ熟考し、非常に時間をかけて客観的根拠をもとに答える。</span>
+            </label>
+            <label class="flex items-start p-4 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-all">
+              <input type="radio" name="rule_check" value="1" class="mt-1 mr-3 h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500">
+              <span class="text-sm font-medium text-slate-700 leading-normal">あまり深く考え込まず、直感的に、できるだけ素早く答える。</span>
+            </label>
+            <label class="flex items-start p-4 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-all">
+              <input type="radio" name="rule_check" value="2" class="mt-1 mr-3 h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500">
+              <span class="text-sm font-medium text-slate-700 leading-normal">自分自身の本音ではなく、一般的な社会の平均を推測して答える。</span>
+            </label>
+          </div>
+          <div id="error-message-check" class="text-red-500 text-sm font-bold mb-4 hidden">※回答を選択してください。</div>
         </div>
       `,
-      choices: [
-        'できるだけ熟考し、非常に時間をかけて客観的根拠をもとに答える。',
-        'あまり深く考え込まず、直感的に、できるだけ素早く答える。',
-        '自分自身の本音ではなく、一般的な社会の平均を推測して答える。'
-      ],
-      button_html: [
-        '<button class="jspsych-btn check-btn bg-slate-100 hover:bg-slate-200 text-slate-700 block w-full mb-3 text-left border border-slate-200 transition-all">%choice%</button>',
-        '<button class="jspsych-btn check-btn bg-slate-100 hover:bg-slate-200 text-slate-700 block w-full mb-3 text-left border border-slate-200 transition-all">%choice%</button>',
-        '<button class="jspsych-btn check-btn bg-slate-100 hover:bg-slate-200 text-slate-700 block w-full mb-3 text-left border border-slate-200 transition-all">%choice%</button>'
-      ],
+      choices: ['回答を送信して実験を終了する'],
+      button_html: '<button id="btn-submit-check" class="jspsych-btn btn-next mx-auto block">%choice%</button>',
+      on_load: function() {
+        const submitBtn = document.getElementById('btn-submit-check');
+        submitBtn.addEventListener('click', function(e) {
+          const selected = document.querySelector('input[name="rule_check"]:checked');
+          const errorDiv = document.getElementById('error-message-check');
+
+          if (!selected) {
+            e.stopPropagation();
+            errorDiv.classList.remove('hidden');
+            return;
+          }
+          
+          // 一時的プロパティに保存
+          jsPsych.data.addProperties({
+            temp_check_response: parseInt(selected.value)
+          });
+        }, true);
+      },
       data: {
         question_id: "comprehension_check"
       },
       on_finish: function(data) {
-        data.correct = (data.response === 1);
+        const responseVal = jsPsych.data.get().select('temp_check_response').values[0];
+        data.response = responseVal;
+        data.correct = (responseVal === 1);
       }
     };
     timeline.push(check_trial);
-
-    // ----------------------------------------------------
-    // 6. デブリーフィング画面
-    // ----------------------------------------------------
-    const debriefing = {
-      type: jsPsychHtmlButtonResponse,
-      stimulus: `
-        <div class="experiment-card">
-          <h1 class="text-2xl font-bold mb-4 border-b pb-2 text-indigo-600">実験お疲れ様でした（デブリーフィング）</h1>
-          <p class="mb-4 text-sm leading-relaxed text-slate-600">
-            本調査の本当の目的について説明します。
-          </p>
-          <p class="mb-4 text-sm leading-relaxed text-slate-600">
-            本研究は、提示する「質問の順序」が、人間の評価判断に与える影響（順序効果）を検証することを目的としています。
-            ベイズ推論を基礎とする伝統的な「古典確率モデル」では、質問の順序が変わっても、本来各質問に対するYes/Noの確率は変化しないはずです。しかし、人間の認知判断は前に提示された質問の「文脈」に強く干渉されます。これを、近年認知心理学で注目されている「量子力学の数理的な枠組み（非可換性）」を適用した<strong>「量子認知モデル」</strong>を用いて、一貫性のある数理モデルとして記述できるかを比較検討しています。
-          </p>
-          <p class="mb-4 text-sm leading-relaxed text-slate-600">
-            事前の開示により直感的な評価回答が歪むのを防ぐため、事前説明では研究課題を曖昧にしていましたことをご了承ください。
-          </p>
-          <p class="text-xs text-red-500 font-bold mb-6">
-            ※「実験データを完了して保存する」をクリックすると、データがGoogleスプレッドシートへ安全に送信されます。
-          </p>
-        </div>
-      `,
-      choices: ['実験データを完了して保存する'],
-      button_html: '<button class="jspsych-btn btn-next mx-auto block">%choice%</button>'
-    };
-    timeline.push(debriefing);
 
     // 実験タイムラインの起動
     jsPsych.run(timeline);
@@ -528,20 +509,21 @@
     }
 
     // ----------------------------------------------------
-    // 8. 終了画面のレンダリング
+    // 8. 終了画面（デブリーフィング統合版）のレンダリング
     // ----------------------------------------------------
 
     function showSuccessScreen(id, group, checkResult, payload) {
       const targetDiv = document.getElementById('jspsych-target');
-      const csvUri = generateCsvUri(payload);
 
       targetDiv.innerHTML = `
-        <div class="experiment-card text-center">
-          <svg class="mx-auto h-16 w-16 text-emerald-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <h1 class="text-3xl font-bold mb-2 text-slate-800">実験データ保存完了！</h1>
-          <p class="text-slate-500 mb-6">スプレッドシートへのデータ送信が完了しました。ご協力ありがとうございました。</p>
+        <div class="experiment-card">
+          <div class="text-center mb-6">
+            <svg class="mx-auto h-16 w-16 text-emerald-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h1 class="text-3xl font-bold mb-2 text-slate-800">実験データ保存完了！</h1>
+            <p class="text-slate-500">スプレッドシートへのデータ送信が完了しました。ご協力ありがとうございました。</p>
+          </div>
           
           <div class="bg-slate-50 p-4 rounded-lg text-left text-xs text-slate-600 mb-6 space-y-1 border border-slate-100">
             <p><strong>学籍番号:</strong> ${id}</p>
@@ -551,12 +533,22 @@
             <p><strong>教示理解チェック:</strong> <span class="${checkResult === 'CORRECT' ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}">${checkResult}</span></p>
           </div>
 
-          <div class="border-t pt-6">
-            <p class="text-xs text-slate-400 mb-3">バックアップ用としてCSVデータを手元に保存しておきたい場合は、下記からダウンロード可能です。</p>
-            <a href="${csvUri}" download="${id}_backup_data.csv" 
-               class="inline-block bg-slate-500 text-white font-bold py-2 px-4 rounded shadow-sm hover:bg-slate-600 transition text-sm cursor-pointer">
-              ローカルにCSVをダウンロード
-            </a>
+          <div class="border-t pt-6 text-left">
+            <h2 class="text-xl font-bold mb-4 text-indigo-600">本研究の目的について（デブリーフィング）</h2>
+            <p class="mb-4 text-sm leading-relaxed text-slate-600">
+              本調査の本当の目的について説明します。
+            </p>
+            <p class="mb-4 text-sm leading-relaxed text-slate-600">
+              本研究は、提示する「質問の順序」が、人間の評価判断に与える影響（順序効果）を検証することを目的としています。
+              ベイズ推論を基礎とする伝統的な「古典確率モデル」では、質問の順序が変わっても、本来各質問に対するYes/Noの確率は変化しないはずです。しかし、人間の認知判断は前に提示された質問の「文脈」に強く干渉されます。これを、近年認知心理学で注目されている「量子力学の数理的な枠組み（非可換性）」を適用した<strong>「量子認知モデル」</strong>を用いて、一貫性のある数理モデルとして記述できるかを比較検討しています。
+            </p>
+            <p class="mb-4 text-sm leading-relaxed text-slate-600">
+              事前の開示により直感的な評価回答が歪むのを防ぐため、事前説明では研究課題を曖昧にしていましたことをご了承ください。
+            </p>
+          </div>
+          
+          <div class="text-center mt-8 border-t pt-4">
+            <p class="text-xs text-slate-400">データは安全に送信されましたので、この画面を閉じて実験を終了してください。</p>
           </div>
         </div>
       `;
@@ -564,62 +556,41 @@
 
     function showFailureScreen(id, group, checkResult, payload) {
       const targetDiv = document.getElementById('jspsych-target');
-      const csvUri = generateCsvUri(payload);
 
       targetDiv.innerHTML = `
-        <div class="experiment-card text-center">
-          <svg class="mx-auto h-16 w-16 text-amber-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <h1 class="text-3xl font-bold mb-2 text-slate-800">通信エラーが発生しました</h1>
-          <p class="text-red-500 text-sm mb-6">スプレッドシートへの自動送信中にネットワーク接続エラーが起きた可能性があります。</p>
+        <div class="experiment-card">
+          <div class="text-center mb-6">
+            <svg class="mx-auto h-16 w-16 text-amber-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h1 class="text-3xl font-bold mb-2 text-slate-800">通信エラーが発生しました</h1>
+            <p class="text-red-500 text-sm">スプレッドシートへの自動送信中にネットワークエラーが起きた可能性があります。</p>
+          </div>
           
           <div class="bg-amber-50 p-4 rounded-lg text-left text-xs text-amber-800 mb-6 border border-amber-200">
             <p class="font-bold mb-1">【実験参加者の方へのお願い】</p>
-            <p>大変お手数ですが、以下のボタンをクリックして<strong>CSVデータファイルをダウンロード</strong>し、実験責任者にこのファイル（またはスクリーンショット）を提出してください。</p>
+            <p>大変お手数ですが、実験が正常に反映されるよう、**この画面全体のスクリーンショットを撮影**し、プリントに記載の責任者メールアドレス、または実験者までお送りください。ご協力ありがとうございます。</p>
           </div>
 
           <div class="bg-slate-50 p-4 rounded-lg text-left text-xs text-slate-600 mb-6 space-y-1 border border-slate-100">
             <p><strong>学籍番号:</strong> ${id}</p>
+            <p><strong>年齢:</strong> ${payload[0].age}</p>
+            <p><strong>性別:</strong> ${payload[0].gender}</p>
             <p><strong>割り当て条件:</strong> 条件 ${group}</p>
+            <p><strong>教示理解チェック:</strong> ${checkResult}</p>
+            <p><strong>企業回答:</strong> A:${payload[0].response_A} / B:${payload[0].response_B}</p>
+            <p><strong>ライフスタイル回答:</strong> A:${payload[1].response_A} / B:${payload[1].response_B}</p>
           </div>
 
-          <a href="${csvUri}" download="${id}_data.csv" 
-             class="inline-block bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition duration-200 transform hover:-translate-y-0.5 cursor-pointer">
-            CSVデータシートをダウンロード
-          </a>
+          <div class="border-t pt-6 text-left">
+            <h2 class="text-xl font-bold mb-4 text-indigo-600">本研究の目的について（デブリーフィング）</h2>
+            <p class="mb-4 text-sm leading-relaxed text-slate-600">
+              本研究は、提示する「質問の順序」が、人間の評価判断に与える影響（順序効果）を検証することを目的としています。
+              ベイズ推論を基礎とする伝統的な「古典確率モデル」に代わり、前に受けた情報が次の判断に干渉するプロセスを、物理学の数学系を応用した<strong>「量子認知モデル」</strong>を用いて数理的整合性を検証しています。
+            </p>
+          </div>
         </div>
       `;
-    }
-
-    // CSVデータ生成用のユーティリティ関数
-    function generateCsvUri(payload) {
-      let csvRows = [
-        ["Category", "Condition", "Response_A", "Response_B", "Pattern", "RT_A", "RT_B", "ComprehensionCheck", "StudentID", "Age", "Gender", "TotalTime_sec"]
-      ];
-
-      payload.forEach(item => {
-        csvRows.push([
-          item.category,
-          item.condition,
-          item.response_A,
-          item.response_B,
-          `${item.response_A}-${item.response_B}`,
-          item.rt_A,
-          item.rt_B,
-          item.comprehension_check,
-          item.student_id,
-          item.age,
-          item.gender,
-          item.rt_total
-        ]);
-      });
-
-      const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); // Excelでの文字化けを防ぐBOM付与
-      const csvContent = csvRows.map(e => e.map(val => `"${val}"`).join(",")).join("\n");
-      const blob = new Blob([bom, csvContent], { type: "text/csv;charset=utf-8;" });
-      
-      return URL.createObjectURL(blob);
     }
   </script>
 </body>
