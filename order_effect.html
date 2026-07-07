@@ -103,7 +103,7 @@
     const jsPsych = initJsPsych({
       display_element: 'jspsych-target',
       on_finish: function() {
-        // 実験終了時（理解度チェックを送信ボタンで終えた瞬間）にスプレッドシートへ自動送信
+        // 実験終了時にスプレッドシートへ自動送信
         sendDataToGAS(jsPsych.data.get());
       }
     });
@@ -124,43 +124,43 @@
     const timeline = [];
 
     // ----------------------------------------------------
-    // 2. 質問文の定義
+    // 2. 質問文の定義 【タイパ vs コスパ】
     // ----------------------------------------------------
 
-    // ダミー質問（文脈リセット用フィラー）
+    // さりげないダミー質問（意思決定やライフスタイル傾向にカモフラージュしたクッション質問）
     const dummy_questions = [
       {
-        question: "あなたは、お米（ごはん）よりもパンを朝食に食べることの方が多いですか？",
+        question: "あなたは普段、新しい飲食店を開拓するよりも、お気に入りで行き慣れたお店に繰り返し行くことの方が多いですか？",
         id: "dummy_1"
       },
       {
-        question: "あなたは、普段映画を見るとき、字幕版よりも日本語吹替版を選ぶことが多いですか？",
+        question: "あなたは物事を進める際、事前に予定を細かく計画して動くよりも、その日の気分や状況に合わせて柔軟に行動することの方が多いですか？",
         id: "dummy_2"
       },
       {
-        question: "あなたは、実生活において犬派（犬が好き）よりも猫派（猫が好き）ですか？",
+        question: "あなたは何か買い物をするとき、実用性や多機能さよりも、デザインや見た目の好みを最優先して選ぶことの方が多いですか？",
         id: "dummy_3"
       }
     ];
 
-    // ターゲット質問ペア1：企業の魅力度評価 (ベンチャーA vs 大手B)
+    // ターゲット質問ペア1：【学習スタイルにおけるタイパ vs コスパ】
     const target1_A = {
-      question: "リスクはあるが、若いうちから裁量権を持って成長できる「ベンチャー企業」は、就職先として魅力的だと思いますか？",
-      id: "target1_A_venture"
+      question: "時間や労力を節約するため、多少お金を払ってでも要点や対策が整理された教材（対策本や学習アプリ等）を使い、最短の時間で要領よく単位修得や試験合格を目指すやり方は、就学スタイルとして合理的で魅力的だと思いますか？",
+      id: "target1_A_study_time"
     };
     const target1_B = {
-      question: "変化は少ないが、福利厚生が充実しており定年まで安定して働ける「大手企業」は、就職先として魅力的だと思いますか？",
-      id: "target1_B_major"
+      question: "お金を節約するため、多少の時間や手間がかかっても、図書館の専門書や無料のWeb情報を自力で調べ上げ、できるだけコストをかけずに深い知識を身につけようとするやり方は、就学スタイルとして価値があり魅力的だと思いますか？",
+      id: "target1_B_study_cost"
     };
 
-    // ターゲット質問ペア2：ライフスタイル（タイパA vs コスパB）
+    // ターゲット質問ペア2：【娯楽・コンテンツ消費におけるタイパ vs コスパ】
     const target2_A = {
-      question: "時間は有限であるため、お金を余分に払ってでも、移動時間を短縮したり効率化できたりするサービス（特急、デリバリー、有料アプリなど）を積極的に利用すべきだと思いますか？",
-      id: "target2_A_time"
+      question: "話題のコンテンツや大量の情報を効率よく把握するため、動画や映画を倍速で視聴したり、10秒スキップや要約（まとめ）サイトを活用して短い時間でトレンドを追うスタイルは、現代の時間の使い方として賢く合理的だと思いますか？",
+      id: "target2_A_media_time"
     };
     const target2_B = {
-      question: "学生の間はお金が限られているため、多少の時間や手間がかかっても、できるだけ安く済ませる工夫（各駅停車、自炊、無料版の利用など）を徹底すべきだと思いますか？",
-      id: "target2_B_money"
+      question: "せっかく購入したコンテンツや月額サブスクリプションサービスの価値を最大限に引き出すため、動画や映画、ゲーム等にじっくりと時間をかけ、細部まで丁寧に鑑賞して楽しむスタイルは、本来の娯楽 of あり方として魅力的だと思いますか？",
+      id: "target2_B_media_cost"
     };
 
     // ----------------------------------------------------
@@ -301,7 +301,7 @@
         <div class="experiment-card text-center">
           <h1 class="text-2xl font-bold mb-4 text-slate-800">判断調査の開始</h1>
           <p class="mb-6 leading-relaxed text-slate-600 text-left">
-            これから、日常的な事象や考え方に関するいくつかの質問が1画面に1問ずつ表示されます。<br><br>
+            これから、日常的な生活習慣や物事の選択傾向に関するいくつかの質問が1画面に1問ずつ表示されます。<br><br>
             あまり深く考え込まず、あなたの心の中の直感に従って、<br>
             <strong>できるだけ素早くスムーズに</strong>【はい (Yes)】または【いいえ (No)】でお答えください。
           </p>
@@ -317,21 +317,21 @@
     // ----------------------------------------------------
     if (group === 0) {
       // --- 条件1（A→B順） ---
-      timeline.push(makeQuestionTrial(target1_A, "target1_A_venture"));
-      timeline.push(makeQuestionTrial(target1_B, "target1_B_major"));
+      timeline.push(makeQuestionTrial(target1_A, "target1_A_study_time"));
+      timeline.push(makeQuestionTrial(target1_B, "target1_B_study_cost"));
       timeline.push(makeQuestionTrial(dummy_questions[0], "dummy"));
       timeline.push(makeQuestionTrial(dummy_questions[1], "dummy"));
-      timeline.push(makeQuestionTrial(target2_A, "target2_A_time"));
-      timeline.push(makeQuestionTrial(target2_B, "target2_B_money"));
+      timeline.push(makeQuestionTrial(target2_A, "target2_A_media_time"));
+      timeline.push(makeQuestionTrial(target2_B, "target2_B_media_cost"));
       timeline.push(makeQuestionTrial(dummy_questions[2], "dummy"));
     } else {
       // --- 条件2（B→A順） ---
-      timeline.push(makeQuestionTrial(target1_B, "target1_B_major"));
-      timeline.push(makeQuestionTrial(target1_A, "target1_A_venture"));
+      timeline.push(makeQuestionTrial(target1_B, "target1_B_study_cost"));
+      timeline.push(makeQuestionTrial(target1_A, "target1_A_study_time"));
       timeline.push(makeQuestionTrial(dummy_questions[0], "dummy"));
       timeline.push(makeQuestionTrial(dummy_questions[1], "dummy"));
-      timeline.push(makeQuestionTrial(target2_B, "target2_B_money"));
-      timeline.push(makeQuestionTrial(target2_A, "target2_A_time"));
+      timeline.push(makeQuestionTrial(target2_B, "target2_B_media_cost"));
+      timeline.push(makeQuestionTrial(target2_A, "target2_A_media_time"));
       timeline.push(makeQuestionTrial(dummy_questions[2], "dummy"));
     }
 
@@ -434,15 +434,15 @@
         return trial ? { response: trial.response_label, rt: Math.round(trial.rt) } : { response: "", rt: "" };
       };
 
-      const t1_A = getTrialData("target1_A_venture");
-      const t1_B = getTrialData("target1_B_major");
-      const t2_A = getTrialData("target2_A_time");
-      const t2_B = getTrialData("target2_B_money");
+      const t1_A = getTrialData("target1_A_study_time");
+      const t1_B = getTrialData("target1_B_study_cost");
+      const t2_A = getTrialData("target2_A_media_time");
+      const t2_B = getTrialData("target2_B_media_cost");
 
       // GASに送信する「2行分」の配列データを構築
       const payload = [
         {
-          category: "企業",
+          category: "学習",
           condition: assignedGroup,
           response_A: t1_A.response,
           response_B: t1_B.response,
@@ -455,7 +455,7 @@
           rt_total: rtTotal
         },
         {
-          category: "ライフスタイル",
+          category: "娯楽消費",
           condition: assignedGroup,
           response_A: t2_A.response,
           response_B: t2_B.response,
@@ -578,8 +578,8 @@
             <p><strong>性別:</strong> ${payload[0].gender}</p>
             <p><strong>割り当て条件:</strong> 条件 ${group}</p>
             <p><strong>教示理解チェック:</strong> ${checkResult}</p>
-            <p><strong>企業回答:</strong> A:${payload[0].response_A} / B:${payload[0].response_B}</p>
-            <p><strong>ライフスタイル回答:</strong> A:${payload[1].response_A} / B:${payload[1].response_B}</p>
+            <p><strong>学習回答:</strong> A:${payload[0].response_A} / B:${payload[0].response_B}</p>
+            <p><strong>娯楽消費回答:</strong> A:${payload[1].response_A} / B:${payload[1].response_B}</p>
           </div>
 
           <div class="border-t pt-6 text-left">
