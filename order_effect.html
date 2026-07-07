@@ -14,7 +14,7 @@
   <!-- Tailwind CSSによるUIスタイリング -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Google Fonts: Inter & Noto Sans JP -->
+  <!-- Google Fonts: Inter & Noto Sans JP による美しい日本語・英語タイポグラフィ -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -24,14 +24,14 @@
 
   <style>
     body {
-      font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background: radial-gradient(circle at 50% 50%, #f8fafc 0%, #f1f5f9 100%);
       color: #0f172a;
       user-select: none;
       min-height: 100vh;
     }
     
-    /* jsPsychのボタン上書きスタイル */
+    /* jsPsychのデフォルトボタン上書きスタイル */
     .jspsych-btn {
       padding: 0.875rem 2.5rem !important;
       font-size: 1.05rem !important;
@@ -51,7 +51,7 @@
       transform: translateY(0);
     }
 
-    /* プレミアムな実験カード */
+    /* プレミアムな実験用カード */
     .experiment-card {
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(8px);
@@ -65,7 +65,7 @@
       text-align: left;
     }
 
-    /* レスポンシブ調整（スマホ向け） */
+    /* モバイル向けレスポンシブ最適化 */
     @media (max-width: 640px) {
       .experiment-card {
         padding: 2rem 1.5rem;
@@ -96,7 +96,7 @@
       background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
     }
 
-    /* ローダースピン */
+    /* ローダースピナーアニメーション */
     .loader {
       border: 4px solid #f1f5f9;
       border-top: 4px solid #2563eb;
@@ -152,43 +152,43 @@
     const timeline = [];
 
     // ----------------------------------------------------
-    // 2. 質問文の定義 【タイパ vs コスパ】
+    // 2. 質問文の定義（ご指定のキーワードにカラー強調を適用）
     // ----------------------------------------------------
 
-    // さりげないダミー質問（意思決定やライフスタイル傾向にカモフラージュしたクッション質問）
+    // さりげないダミー質問（意思決定スタイルに統合）
     const dummy_questions = [
       {
-        question: "あなたは普段、新しい飲食店を開拓するよりも、お気に入りで行き慣れたお店に<strong class='text-indigo-600 font-bold border-b-2 border-indigo-200 pb-0.5'>繰り返し行く</strong>ことの方が多いですか？",
+        question: "あなたは日常の買い物において、直感で選ぶよりも、<strong class='text-indigo-600 font-extrabold border-b-2 border-indigo-200 pb-0.5'>事前に口コミや評価をじっくり調べてから</strong>決めることの方が多いですか？",
         id: "dummy_1"
       },
       {
-        question: "あなたは物事を進める際、事前に予定を細かく計画して動くよりも、その日の気分や状況に合わせて<strong class='text-indigo-600 font-bold border-b-2 border-indigo-200 pb-0.5'>柔軟に行動する</strong>ことの方が多いですか？",
+        question: "あなたは課題やレポートに取り組む際、締め切り直前に一気に仕上げるよりも、<strong class='text-indigo-600 font-extrabold border-b-2 border-indigo-200 pb-0.5'>予定を立ててコツコツ計画的に</strong>進めるタイプですか？",
         id: "dummy_2"
       },
       {
-        question: "あなたは何か買い物をするとき、実用性や多機能さよりも、デザインや見た目の好みを<strong class='text-indigo-600 font-bold border-b-2 border-indigo-200 pb-0.5'>最優先して選ぶ</strong>ことの方が多いですか？",
+        question: "あなたは初めて行く場所へ向かう際、迷ったらその場でスマホマップを頼るよりも、<strong class='text-indigo-600 font-extrabold border-b-2 border-indigo-200 pb-0.5'>あらかじめ前日までにルートを把握しておく</strong>ことが多いですか？",
         id: "dummy_3"
       }
     ];
 
-    // ターゲット質問ペア1：【学習スタイルにおけるタイパ vs コスパ】
+    // ターゲット質問ペア1：大学の学習スタイル（タイパ vs コスパ・深さ）
     const target1_A = {
-      question: "時間や労力を節約するため、多少お金を払ってでも要点や対策が整理された教材（対策本や学習アプリ等）を使い、<strong class='text-rose-600 font-bold border-b-2 border-rose-200 pb-0.5'>最短の時間で要領よく</strong>単位修得や試験合格を目指すやり方は、就学スタイルとして合理的で魅力的だと思いますか？",
-      id: "target1_A_study_time"
+      question: "大学の講義において、内容を深く追求するよりも、時間効率を最優先して、<strong class='text-rose-600 font-extrabold border-b-2 border-rose-200 pb-0.5'>「多少お金を払ってでも」</strong>市販のまとめノートや要約スライドを活用して最短ルートで単位を取得すべきだと思いますか？",
+      id: "target1_A_time"
     };
     const target1_B = {
-      question: "お金を節約するため、多少の時間や手間がかかっても、図書館の専門書や無料のWeb情報を自力で調べ上げ、<strong class='text-blue-600 font-bold border-b-2 border-blue-200 pb-0.5'>できるだけコストをかけずに</strong>深い知識を身につけようとするやり方は、就学スタイルとして価値があり魅力的だと思いますか？",
-      id: "target1_B_study_cost"
+      question: "大学の講義において、効率悪く感じられたとしても、自力で図書館の文献を調べたりノートをまとめ直したりして、<strong class='text-blue-600 font-extrabold border-b-2 border-blue-200 pb-0.5'>「多少の時間や手間がかかっても」</strong>自分の力で深い知識と理解を得るスタイルを徹底すべきだと思いますか？",
+      id: "target1_B_money"
     };
 
-    // ターゲット質問ペア2：【娯楽・コンテンツ消費におけるタイパ vs コスパ】
+    // ターゲット質問ペア2：娯楽・コンテンツ消費（タイパ vs コスパ・丁寧さ）
     const target2_A = {
-      question: "話題のコンテンツや大量の情報を効率よく把握するため、動画や映画を倍速で視聴したり、10秒スキップや要約（まとめ）サイトを活用して<strong class='text-rose-600 font-bold border-b-2 border-rose-200 pb-0.5'>短い時間で</strong>トレンドを追うスタイルは、現代の時間の使い方として賢く合理的だと思いますか？",
-      id: "target2_A_media_time"
+      question: "話題のドラマやアニメを視聴する際、最新のトレンドに後れを取らないスピードを最優先して、<strong class='text-rose-600 font-extrabold border-b-2 border-rose-200 pb-0.5'>「多少お金を払ってでも」</strong>倍速再生機能や考察まとめ動画を活用し、短時間でストーリーの要点だけを把握すべきだと思いますか？",
+      id: "target2_A_time"
     };
     const target2_B = {
-      question: "せっかく購入したコンテンツや月額サブスクリプションサービスの価値を最大限に引き出すため、動画や映画、ゲーム等に<strong class='text-blue-600 font-bold border-b-2 border-blue-200 pb-0.5'>じっくりと時間をかけ</strong>、細部まで丁寧に鑑賞して楽しむスタイルは、本来の娯楽のあり方として魅力的だと思いますか？",
-      id: "target2_B_media_cost"
+      question: "話題のドラマやアニメを視聴する際、せっかくの定額制サブスク料金や作品の魅力を余すことなく体験するために、<strong class='text-blue-600 font-extrabold border-b-2 border-blue-200 pb-0.5'>「多少の時間や手間がかかっても」</strong>等倍速で1話ずつじっくり最後まで世界観を味わうべきだと思いますか？",
+      id: "target2_B_money"
     };
 
     // ----------------------------------------------------
@@ -221,8 +221,8 @@
               注意事項と同意事項
             </h2>
             <ul class="list-disc pl-5 text-sm text-slate-600 space-y-2">
-              <li>この調査への参加は<strong>完全に自由</strong>です。途中で回答を中止したくなったり、画面を閉じたりしても不利益を被ることはありません。</li>
-              <li>回答データはすべて個人が特定できない形式で統計的に処理され、学術的公表目的（卒論発表等）のみで使用されます。</li>
+              <li>この調査への参加は<strong>完全に自由</strong>です。途中で回答を中止したくなったり、画面を閉じたりしても何らかの不利益を被ることはありません。</li>
+              <li>回答データはすべて個人が特定できない形式で統計的に処理され、卒論などの学術的公表目的のみで使用されます。</li>
               <li>途中でブラウザの「戻る」ボタンを押すと正常にデータが記録できなくなります。<strong>最後まで戻らずに</strong>進めていただきますようお願いいたします。</li>
               <li>集中して回答できる環境で進めてください。</li>
             </ul>
@@ -333,14 +333,14 @@
     };
     timeline.push(profile_form);
 
-    // Yes/No 質問表示テンプレート（上部に進行バー付き）
+    // 進行状況バー付き質問表示テンプレート
     function makeQuestionTrial(qObj, index, total, category = "dummy") {
       const progressPercent = Math.round((index / total) * 100);
       return {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
           <!-- 上部進捗ヘッダー -->
-          <div class="max-w-[750px] w-[95%] mx-auto mt-6 px-1">
+          <div class="max-w-[750px] w-[95%] mx-auto mt-6 px-1 text-left">
             <div class="flex justify-between items-center text-xs font-semibold text-slate-500 mb-2">
               <span>質問進行状況</span>
               <span>${index} / ${total} 問目 (${progressPercent}%)</span>
@@ -352,7 +352,7 @@
 
           <div class="experiment-card">
             <div class="mb-4">
-              <span class="inline-block bg-slate-100 text-slate-600 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+              <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
                 質問
               </span>
             </div>
@@ -391,7 +391,7 @@
             <h1 class="text-2xl font-bold text-slate-800">判断調査の開始</h1>
           </div>
           <p class="mb-6 leading-relaxed text-slate-600 text-left text-sm md:text-base">
-            これから、日常的な生活習慣や物事の選択傾向に関するいくつかの質問が1画面に1問ずつ表示されます。<br><br>
+            これから、日常的なライフスタイルや考え方に関するいくつかの質問が1画面に1問ずつ表示されます。<br><br>
             あまり深く考え込まず、あなたの心の中の直感に従って、<br>
             <strong class="text-slate-800 font-semibold border-b-2 border-emerald-300">できるだけ素早くスムーズに</strong>【はい (Yes)】または【いいえ (No)】でお答えください。
           </p>
@@ -403,32 +403,32 @@
     timeline.push(test_instruction);
 
     // ----------------------------------------------------
-    // 4. ランダム割り当てに応じた質問順序の適用（合計7問）
+    // 4. ランダム順序割り当て（全7問）
     // ----------------------------------------------------
     const total_trials_count = 7;
 
     if (group === 0) {
       // --- 条件1（A→B順） ---
-      timeline.push(makeQuestionTrial(target1_A, 1, total_trials_count, "target1_A_study_time"));
-      timeline.push(makeQuestionTrial(target1_B, 2, total_trials_count, "target1_B_study_cost"));
+      timeline.push(makeQuestionTrial(target1_A, 1, total_trials_count, "学習"));
+      timeline.push(makeQuestionTrial(target1_B, 2, total_trials_count, "学習"));
       timeline.push(makeQuestionTrial(dummy_questions[0], 3, total_trials_count, "dummy"));
       timeline.push(makeQuestionTrial(dummy_questions[1], 4, total_trials_count, "dummy"));
-      timeline.push(makeQuestionTrial(target2_A, 5, total_trials_count, "target2_A_media_time"));
-      timeline.push(makeQuestionTrial(target2_B, 6, total_trials_count, "target2_B_media_cost"));
+      timeline.push(makeQuestionTrial(target2_A, 5, total_trials_count, "娯楽消費"));
+      timeline.push(makeQuestionTrial(target2_B, 6, total_trials_count, "娯楽消費"));
       timeline.push(makeQuestionTrial(dummy_questions[2], 7, total_trials_count, "dummy"));
     } else {
       // --- 条件2（B→A順） ---
-      timeline.push(makeQuestionTrial(target1_B, 1, total_trials_count, "target1_B_study_cost"));
-      timeline.push(makeQuestionTrial(target1_A, 2, total_trials_count, "target1_A_study_time"));
+      timeline.push(makeQuestionTrial(target1_B, 1, total_trials_count, "学習"));
+      timeline.push(makeQuestionTrial(target1_A, 2, total_trials_count, "学習"));
       timeline.push(makeQuestionTrial(dummy_questions[0], 3, total_trials_count, "dummy"));
       timeline.push(makeQuestionTrial(dummy_questions[1], 4, total_trials_count, "dummy"));
-      timeline.push(makeQuestionTrial(target2_B, 5, total_trials_count, "target2_B_media_cost"));
-      timeline.push(makeQuestionTrial(target2_A, 6, total_trials_count, "target2_A_media_time"));
+      timeline.push(makeQuestionTrial(target2_B, 5, total_trials_count, "娯楽消費"));
+      timeline.push(makeQuestionTrial(target2_A, 6, total_trials_count, "娯楽消費"));
       timeline.push(makeQuestionTrial(dummy_questions[2], 7, total_trials_count, "dummy"));
     }
 
     // ----------------------------------------------------
-    // 5. 理解度チェック 兼 送信トリガー画面
+    // 5. 理解度チェック 兼 送信トリガー
     // ----------------------------------------------------
     const check_trial = {
       type: jsPsychHtmlButtonResponse,
@@ -484,7 +484,6 @@
             return;
           }
           
-          // 一時的プロパティに保存
           jsPsych.data.addProperties({
             temp_check_response: parseInt(selected.value)
           });
@@ -505,7 +504,7 @@
     jsPsych.run(timeline);
 
     // ----------------------------------------------------
-    // 7. GASへの構造化データ送信処理
+    // 6. GASデータ送信 & デブリーフィング画面表示
     // ----------------------------------------------------
     async function sendDataToGAS(data) {
       const targetDiv = document.getElementById('jspsych-target');
@@ -518,35 +517,30 @@
         </div>
       `;
 
-      // 共通データの抽出
       const studentId = data.select('student_id').values[0] || "N/A";
       const age = data.select('age').values[0] || "N/A";
       const gender = data.select('gender').values[0] || "N/A";
       const assignedGroup = data.select('assigned_group').values[0] || "UNKNOWN";
 
-      // 総所要時間の計算（秒単位）
       const endTime = performance.now();
       const rtTotal = Math.round((endTime - startTime) / 1000);
 
-      // 理解度チェックの確認
       let isCheckCorrect = "UNKNOWN";
       const checkTrial = data.filter({question_id: 'comprehension_check'}).values()[0];
       if (checkTrial) {
         isCheckCorrect = checkTrial.correct ? "CORRECT" : "INCORRECT";
       }
 
-      // ターゲット質問回答の抽出
       const getTrialData = (qId) => {
         const trial = data.filter({question_id: qId}).values()[0];
         return trial ? { response: trial.response_label, rt: Math.round(trial.rt) } : { response: "", rt: "" };
       };
 
-      const t1_A = getTrialData("target1_A_study_time");
-      const t1_B = getTrialData("target1_B_study_cost");
-      const t2_A = getTrialData("target2_A_media_time");
-      const t2_B = getTrialData("target2_B_media_cost");
+      const t1_A = getTrialData("target1_A_time");
+      const t1_B = getTrialData("target1_B_money");
+      const t2_A = getTrialData("target2_A_time");
+      const t2_B = getTrialData("target2_B_money");
 
-      // GASに送信する「2行分」の配列データを構築
       const payload = [
         {
           category: "学習",
@@ -576,15 +570,13 @@
         }
       ];
 
-      // 通信リトライ関数（最大5回指数バックオフ）
+      // リトライ付きフェッチ関数
       const fetchWithRetry = async (url, options, retries = 5, delay = 1000) => {
         try {
           const response = await fetch(url, options);
-          
           if (options.mode === 'no-cors' || response.type === 'opaque') {
             return { result: "opaque_success" };
           }
-          
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           return await response.json();
         } catch (error) {
@@ -598,16 +590,12 @@
       };
 
       try {
-        // mode: 'no-cors' で送信し、ブラウザのCORS制限によるリクエスト遮断を完全に防止
         await fetchWithRetry(GAS_WEBAPP_URL, {
           method: 'POST',
           mode: 'no-cors',
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8'
-          },
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
-        
         showSuccessScreen(studentId, assignedGroup, isCheckCorrect, payload);
       } catch (error) {
         console.error("データの送信に失敗しました:", error);
@@ -615,11 +603,7 @@
       }
     }
 
-    // ----------------------------------------------------
-    // 8. 終了画面（デブリーフィング統合版）のレンダリング
-    // ----------------------------------------------------
-
-    // 安全なクリップボードコピー用のヘルパー関数
+    // クリップボードへのコピー（iFrame環境対応のフォールバック付き）
     function copyToClipboard(text) {
       const tempTextArea = document.createElement("textarea");
       tempTextArea.value = text;
@@ -638,7 +622,6 @@
 
     function showSuccessScreen(id, group, checkResult, payload) {
       const targetDiv = document.getElementById('jspsych-target');
-
       targetDiv.innerHTML = `
         <div class="experiment-card max-w-[800px]">
           <div class="text-center mb-6">
@@ -647,8 +630,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h1 class="text-3xl font-extrabold mb-2 text-slate-800">実験データ保存完了</h1>
-            <p class="text-slate-500 text-sm">回答スプレッドシートへの安全な転送が完了しました。</p>
+            <h1 class="text-3xl font-extrabold mb-2 text-slate-800">実験データ保存完了！</h1>
+            <p class="text-slate-500 text-sm">スプレッドシートへの安全なデータ送信が完了しました。ご協力ありがとうございました。</p>
           </div>
           
           <div class="bg-slate-50 p-5 rounded-xl text-left text-xs text-slate-600 mb-6 space-y-1.5 border border-slate-200">
@@ -671,15 +654,15 @@
             </p>
             <p class="mb-4 text-sm leading-relaxed text-slate-600">
               本研究は、提示する「質問の順序」が、人間の評価判断に与える影響（順序効果）を検証することを目的としています。
-              ベイズ推論を基礎とする伝統的な「古典確率モデル」では、質問の順序が変わっても、本来各質問に対するYes/Noの確率は変化しないはずです。しかし、実際の認知判断は直前に提示された質問の「文脈」に強く干渉されます。これを、近年認知心理学で注目されている「量子力学の数理的な枠組み（非可換性）」を適用した<strong>「量子認知モデル」</strong>を用いて、一貫性のある数理モデルとして記述できるかを比較検討しています。
+              ベイズ推論を基礎とする伝統的な「古典確率モデル」に代わり、前に受けた質問の文脈が次の判断に干渉するプロセスを、物理学の数学系を応用した<strong>「量子認知モデル」</strong>を用いて数理的な整合性を検証しています。
             </p>
             <p class="mb-4 text-sm leading-relaxed text-slate-600">
               事前の開示により直感的な評価回答が歪むのを防ぐため、事前説明では研究課題を曖昧にしていましたことをご了承ください。
             </p>
           </div>
-          
+
           <div class="text-center mt-8 border-t pt-5">
-            <p class="text-xs text-slate-400">データは安全に記録されました。この画面を閉じてブラウザを終了してください。</p>
+            <p class="text-xs text-slate-400">データは安全に送信されましたので、この画面を閉じて実験を終了してください。</p>
           </div>
         </div>
       `;
@@ -697,17 +680,17 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h1 class="text-2xl font-extrabold mb-2 text-slate-800">ネットワーク通信エラー</h1>
-            <p class="text-red-500 text-sm">スプレッドシートへの自動送信中にネットワーク遮断が検知されました。</p>
+            <h1 class="text-3xl font-bold mb-2 text-slate-800">通信エラーが発生しました</h1>
+            <p class="text-red-500 text-sm">自動送信中に一時的なネットワーク切断、またはCORS制限によるリクエスト遮断が検知されました。</p>
           </div>
           
           <div class="bg-amber-50 p-5 rounded-xl text-left text-sm text-amber-800 mb-6 border border-amber-200">
             <p class="font-bold mb-2">【実験参加者の方へのお願い】</p>
             <p class="leading-relaxed text-xs">
-              大変お手数ですが、実験データが反映されるよう、下の<strong>「回答データをコピーする」</strong>ボタンをクリックし、表示された内容をそのまま実験担当者にメールでお送りいただくか、プリント記載の責任者までご連絡ください。
+              大変お手数ですが、実験データが反映されるよう、下の<strong>「回答データをコピーする」</strong>ボタンをクリックし、表示された内容をそのまま実験担当者にメールでお送りいただくか、プリント等に記載されている責任者の連絡先までご連絡ください。
             </p>
             <div class="mt-4 flex flex-col sm:flex-row gap-2">
-              <button id="btn-copy-data" class="bg-amber-600 text-white font-bold py-2 px-4 rounded-lg text-xs hover:bg-amber-700 active:scale-[0.98] transition">
+              <button id="btn-copy-data" class="bg-amber-600 text-white font-bold py-2.5 px-4 rounded-lg text-xs hover:bg-amber-700 active:scale-[0.98] transition">
                 回答データをコピーする
               </button>
               <span id="copy-status" class="text-xs text-amber-700 flex items-center font-semibold"></span>
@@ -715,15 +698,21 @@
           </div>
 
           <div class="bg-slate-50 p-4 rounded-lg text-left text-xs text-slate-600 mb-6 border border-slate-200">
-            <h3 class="font-bold text-slate-700 text-sm mb-1">現在の回答ログ</h3>
+            <h3 class="font-bold text-slate-700 text-sm mb-1">送信対象の回答ログ</h3>
             <pre class="bg-slate-800 text-emerald-400 p-3 rounded-lg overflow-x-auto text-[10px] max-h-[150px] leading-relaxed">${payloadString}</pre>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-lg text-left text-xs text-slate-600 mb-6 space-y-1 border border-slate-100">
+            <p><strong>学籍番号:</strong> ${id}</p>
+            <p><strong>学習回答:</strong> A:${payload[0].response_A} / B:${payload[0].response_B}</p>
+            <p><strong>娯楽消費回答:</strong> A:${payload[1].response_A} / B:${payload[1].response_B}</p>
           </div>
 
           <div class="border-t pt-6 text-left">
             <h2 class="text-lg font-bold mb-3 text-indigo-600">本研究の目的について（デブリーフィング）</h2>
             <p class="mb-4 text-sm leading-relaxed text-slate-600">
               本研究は、提示する「質問の順序」が、人間の評価判断に与える影響（順序効果）を検証することを目的としています。
-              前に受けた情報が次の判断に干渉するプロセスを、物理学の数学系を応用した<strong>「量子認知モデル」</strong>を用いて数理的整合性を検証しています。
+              ベイズ推論を基礎とする伝統的な「古典確率モデル」に代わり、前に受けた情報が次の判断に干渉するプロセスを、物理学の数学系を応用した<strong>「量子認知モデル」</strong>を用いて数理的整合性を検証しています。
             </p>
           </div>
         </div>
@@ -745,7 +734,7 @@
           copyStatus.classList.remove('text-amber-700');
           copyStatus.classList.add('text-emerald-700');
         } else {
-          copyStatus.textContent = "コピーに失敗しました。お手数ですが枠内を直接選択してコピーしてください。";
+          copyStatus.textContent = "コピーに失敗しました。お手数ですが、上の黒枠内のログを直接全選択してコピーしてください。";
         }
       });
     }
