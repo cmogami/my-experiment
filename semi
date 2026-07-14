@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>意思決定と判断に関する調査実験</title>
+  
+  <!-- jsPsych CDNの読み込み -->
+  <script src="https://unpkg.com/jspsych@7.3.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.2"></script>
+  
+  <!-- Tailwind CSSによるUIスタイリング -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- jsPsychのデフォルトスタイルシート -->
+  <link href="https://unpkg.com/jspsych@7.3.0/css/jspsych.css" rel="stylesheet" type="text/css">
+
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      user-select: none;
+    }
+    .jspsych-btn {
+      padding: 0.75rem 2rem !important;
+      font-size: 1.1rem !important;
+      font-weight: 600 !important;
+      border-radius: 0.5rem !important;
+      transition: all 0.2s ease !important;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+    }
+    .jspsych-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+    }
+    .experiment-card {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      padding: 3rem 2rem;
+      max-width: 700px;
+      width: 95%;
+      margin: 1.5rem auto;
+      text-align: left;
+    }
+    .btn-yes {
+      background-color: #3b82f6 !important;
+      color: white !important;
+      border: none !important;
+    }
+    .btn-yes:hover {
+      background-color: #2563eb !important;
+    }
+    .btn-no {
+      background-color: #ef4444 !important;
+      color: white !important;
+      border: none !important;
+    }
+    .btn-no:hover {
+      background-color: #dc2626 !important;
+    }
+    .btn-next {
+      background-color: #10b981 !important;
+      color: white !important;
+      border: none !important;
+    }
+    .btn-next:hover {
+      background-color: #059669 !important;
+    }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="jspsych-target" class="min-h-screen flex items-center justify-center p-4"></div>
+
+  <script>
+    // ----------------------------------------------------
+    // GAS送信用のエンドポイント設定
+    // ----------------------------------------------------
+    const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyRRKtEko0RWmniwiKynOMah58XCZij2iNkugp4HGK6z-Q0V5kNdaMnYiqW27sjR9Mi/exec";
+
+    // 実験の総所要時間測定用
+    const startTime = performance.now();
+
+    // ----------------------------------------------------
+    // 1. 実験初期設定・グループ割り当て
+    // ----------------------------------------------------
+    const jsPsych = initJsPsych({
+      display_element: 'jspsych-target',
+      on_finish: function() {
+        sendDataToGAS(jsPsych.data.get());
+      }
+    });
+
+    const group = Math.floor(Math.random() * 2);
+    const groupName = group === 0 ? "A-B" : "B-A";
+    const systemId = 'SYS_' + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+    jsPsych.data.addProperties({
+      system_id: systemId,
+      assigned_group: groupName
+    });
+
+    const timeline = [];
+
+    // ----------------------------------------------------
+    // 2. 質問文の定義（カラー強調 & 修正された質問文）
+    // ----------------------------------------------------
+
+    // さりげないダミー質問（意思決定スタイルに統合）
+    const dummy_questions = [
+      {
+        question: "あなたは日常の買い物において、直感で選ぶよりも、<strong class='text-indigo-600 font-extrabold'>事前に口コミや評価をじっくり調べてから</strong>決めることの方が多いですか？",
+        id: "dummy_1"
+      },
+      {
+        question: "あなたは課題やレポートに取り組む際、締め切り直前に一気に仕上げるよりも、<strong class='text-indigo-600 font-extrabold'>予定を立ててコツコツ計画的に</strong>進めるタイプですか？",
+        id: "dummy_2"
+      },
+      {
+        question: "あなたは初めて行く場所へ向かう際、迷ったらその場でスマホでGoogleマップ等を頼るよりも、<strong class='text-indigo-600 font-extrabold'>あらかじめ前日までにルートを把握しておく</strong>ことが多いですか？",
+        id: "dummy_3"
+      }
+    ];
+
+    // ターゲット質問ペア1：大学の学習スタイル（タイパ vs コスパ・深さ）
+    const target1_A = {
+      question: "大学の講義において、内容を深く追求するよりも、時間効率を最優先して、<strong class='text-rose-600 font-extrabold'>「多少お金を払ってでも」</strong>市販のまとめノートや要約スライドを活用して最短ルートで単位を取得すべきだと思いますか？",
+      id: "target1_A_time"
+    };
+    const target1_B = {
+      question: "大学の講義において、効率悪く感じられたとしても、自力で図書館の文献を調べたりノートをまとめ直したりして、<strong class='text-blue-600 font-extrabold'>「多少の時間や手間がかかっても」</strong>自分の力で深い知識と理解を得るスタイルを徹底すべきだと思いますか？",
+      id: "target1_B_money"
+    };
+
+    // ターゲット質問ペア2：娯楽・コンテンツ消費（タイパ vs コスパ・丁寧さ）
+    const target2_A = {
+      question: "話題のドラマやアニメを視聴する際、最新のトレンドに後れを取らないスピードを最優先して、<strong class='text-rose-600 font-extrabold'>「多少お金を払ってでも」</strong>倍速再生機能や考察まとめ動画を活用し、短時間でストーリーの要点だけを把握すべきだと思いますか？",
+      id: "target2_A_time"
+    };
+    const target2_B = {
+      question: "話題のドラマやアニメを視聴する際、せっかくの定額制サブスク料金や作品の魅力を余すことなく体験するために、<strong class='text-blue-600 font-extrabold'>「多少の時間や手間がかかっても」</strong>等倍速で1話ずつじっくり最後まで世界観を味わうべきだと思いますか？",
+      id: "target2_B_money"
+    };
+
+    // ----------------------------------------------------
+    // 3. 実験画面（トライアル）の構築
+    // ----------------------------------------------------
+
+    const consent = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="experiment-card">
+          <h1 class="text-2xl font-bold mb-4 border-b pb-2 text-blue-600">調査へのご協力のお願い</h1>
+          <p class="mb-4 text-sm text-slate-600 leading-relaxed">
+            本調査は、日常的な事象に対する人々の評価や判断の傾向を調べるための学術研究（卒業研究）です。所要時間は5分程度です。
+          </p>
+          <h2 class="text-lg font-semibold mb-2">【注意事項と同意事項】</h2>
+          <ul class="list-disc pl-5 mb-6 text-sm text-slate-600 space-y-2">
+            <li>この調査への参加は完全に自由です。途中で回答を中止したくなったり、画面を閉じたりしても何らかの不利益を被ることはありません。</li>
+            <li>回答データはすべて個人が特定できない形式で統計的に処理され、卒論などの学術的公表目的のみで使用されます。</li>
+            <li>途中でブラウザの「戻る」ボタンを押すと、正常にデータが記録されなくなりますので、最後まで進めていただきますようお願いいたします。</li>
+            <li>集中して一気に回答できる環境で進めてください。</li>
+          </ul>
+          <p class="font-medium text-slate-700">以上の内容を十分に理解し、同意して調査に参加していただけますか？</p>
+        </div>
+      `,
+      choices: ['同意して次へ進む'],
+      button_html: '<button class="jspsych-btn btn-next mx-auto block">%choice%</button>'
+    };
+    timeline.push(consent);
+
+    const profile_form = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="experiment-card">
+          <h1 class="text-2xl font-bold mb-6 border-b pb-2 text-indigo-600">参加者情報のご入力</h1>
+          <p class="mb-6 text-sm text-slate-500">
+            実験の統計処理およびデータの整理のため、以下の項目についてご回答をお願いいたします。
+          </p>
+          <div class="space-y-4 mb-6">
+            <div>
+              <label for="student_id" class="block text-sm font-semibold text-slate-700 mb-1">学籍番号 <span class="text-red-500">*</span></label>
+              <input type="text" id="student_id" name="student_id" placeholder="例: 2312C30" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg">
+            </div>
+            <div>
+              <label for="age" class="block text-sm font-semibold text-slate-700 mb-1">年齢 <span class="text-red-500">*</span></label>
+              <input type="number" id="age" name="age" min="15" max="100" placeholder="例: 20" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg">
+            </div>
+            <div>
+              <label for="gender" class="block text-sm font-semibold text-slate-700 mb-1">性別 <span class="text-red-500">*</span></label>
+              <select id="gender" name="gender" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg bg-white">
+                <option value="" disabled selected>選択してください</option>
+                <option value="男性">男性</option>
+                <option value="女性">女性</option>
+                <option value="その他">その他</option>
+                <option value="回答しない">回答しない</option>
+              </select>
+            </div>
+          </div>
+          <div id="error-message" class="text-red-500 text-sm font-bold mb-4 hidden"></div>
+        </div>
+      `,
+      choices: ['情報を登録して調査説明へ進む'],
+      button_html: '<button id="btn-submit-profile" class="jspsych-btn btn-next mx-auto block">%choice%</button>',
+      on_load: function() {
+        const submitBtn = document.getElementById('btn-submit-profile');
+        submitBtn.addEventListener('click', function(e) {
+          const studentId = document.getElementById('student_id').value.trim();
+          const age = document.getElementById('age').value.trim();
+          const gender = document.getElementById('gender').value;
+          const errorDiv = document.getElementById('error-message');
+
+          if (!studentId || !age || !gender) {
+            e.stopPropagation();
+            errorDiv.textContent = '※すべての必須項目(*)を入力または選択してください。';
+            errorDiv.classList.remove('hidden');
+            return;
+          }
+
+          jsPsych.data.addProperties({
+            student_id: studentId,
+            age: parseInt(age),
+            gender: gender
+          });
+        }, true);
+      }
+    };
+    timeline.push(profile_form);
+
+    function makeQuestionTrial(qObj, category = "dummy") {
+      return {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+          <div class="experiment-card">
+            <p class="text-xl font-bold leading-relaxed mb-8 text-slate-800">${qObj.question}</p>
+          </div>
+        `,
+        choices: ['はい (Yes)', 'いいえ (No)'],
+        button_html: [
+          '<button class="jspsych-btn btn-yes mb-3 md:mb-0 md:mr-4 w-full md:w-auto">%choice%</button>',
+          '<button class="jspsych-btn btn-no w-full md:w-auto">%choice%</button>'
+        ],
+        data: {
+          trial_type_detail: 'test',
+          question_id: qObj.id,
+          question_category: category
+        },
+        on_finish: function(data) {
+          data.response_label = data.response === 0 ? 'Yes' : 'No';
+        }
+      };
+    }
+
+    const test_instruction = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="experiment-card text-center">
+          <h1 class="text-2xl font-bold mb-4 text-slate-800">判断調査の開始</h1>
+          <p class="mb-6 leading-relaxed text-slate-600 text-left">
+            これから、日常的なライフスタイルや考え方に関するいくつかの質問が1画面に1問ずつ表示されます。<br><br>
+            <strong class="text-rose-600 font-extrabold text-lg underline decoration-2 underline-offset-4">あまり深く考え込まず、あなたの心の中の直感に従って、できるだけ素早くスムーズに</strong>【はい (Yes)】または【いいえ (No)】でお答えください。
+          </p>
+        </div>
+      `,
+      choices: ['調査を開始する'],
+      button_html: '<button class="jspsych-btn btn-next mx-auto block">%choice%</button>'
+    };
+    timeline.push(test_instruction);
+
+    // ----------------------------------------------------
+    // 4. ランダム順序割り当て
+    // ----------------------------------------------------
+    if (group === 0) {
+      timeline.push(makeQuestionTrial(target1_A, "学習"));
+      timeline.push(makeQuestionTrial(target1_B, "学習"));
+      timeline.push(makeQuestionTrial(dummy_questions[0], "dummy"));
+      timeline.push(makeQuestionTrial(dummy_questions[1], "dummy"));
+      timeline.push(makeQuestionTrial(target2_A, "娯楽消費"));
+      timeline.push(makeQuestionTrial(target2_B, "娯楽消費"));
+      timeline.push(makeQuestionTrial(dummy_questions[2], "dummy"));
+    } else {
+      timeline.push(makeQuestionTrial(target1_B, "学習"));
+      timeline.push(makeQuestionTrial(target1_A, "学習"));
+      timeline.push(makeQuestionTrial(dummy_questions[0], "dummy"));
+      timeline.push(makeQuestionTrial(dummy_questions[1], "dummy"));
+      timeline.push(makeQuestionTrial(target2_B, "娯楽消費"));
+      timeline.push(makeQuestionTrial(target2_A, "娯楽消費"));
+      timeline.push(makeQuestionTrial(dummy_questions[2], "dummy"));
+    }
+
+    // ----------------------------------------------------
+    // 5. 理解度チェック 兼 送信トリガー
+    // ----------------------------------------------------
+    const check_trial = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="experiment-card">
+          <h1 class="text-xl font-bold mb-4 text-slate-800 border-b pb-2">最後に確認の質問です</h1>
+          <p class="mb-6 leading-relaxed text-slate-600 text-sm">
+            今回の本番課題に回答する際、あなたに対してあらかじめ伝えられていた「回答のルール」として最も当てはまるものを、以下から1つ選んでください。
+          </p>
+          <div class="space-y-3 mb-6">
+            <label class="flex items-start p-4 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-all">
+              <input type="radio" name="rule_check" value="0" class="mt-1 mr-3 h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500">
+              <span class="text-sm font-medium text-slate-700 leading-normal">できるだけ熟考し、非常に時間をかけて客観的根拠をもとに答える。</span>
+            </label>
+            <label class="flex items-start p-4 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-all">
+              <input type="radio" name="rule_check" value="1" class="mt-1 mr-3 h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500">
+              <span class="text-sm font-medium text-slate-700 leading-normal">あまり深く考え込まず、直感的に、できるだけ素早く答える。</span>
+            </label>
+            <label class="flex items-start p-4 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-all">
+              <input type="radio" name="rule_check" value="2" class="mt-1 mr-3 h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500">
+              <span class="text-sm font-medium text-slate-700 leading-normal">自分自身の本音ではなく、一般的な社会の平均を推測して答える。</span>
+            </label>
+          </div>
+          <div id="error-message-check" class="text-red-500 text-sm font-bold mb-4 hidden">※回答を選択してください。</div>
+        </div>
+      `,
+      choices: ['回答を送信して実験を終了する'],
+      button_html: '<button id="btn-submit-check" class="jspsych-btn btn-next mx-auto block">%choice%</button>',
+      on_load: function() {
+        const submitBtn = document.getElementById('btn-submit-check');
+        submitBtn.addEventListener('click', function(e) {
+          const selected = document.querySelector('input[name="rule_check"]:checked');
+          const errorDiv = document.getElementById('error-message-check');
+
+          if (!selected) {
+            e.stopPropagation();
+            errorDiv.classList.remove('hidden');
+            return;
+          }
+          
+          jsPsych.data.addProperties({
+            temp_check_response: parseInt(selected.value)
+          });
+        }, true);
+      },
+      data: {
+        question_id: "comprehension_check"
+      },
+      on_finish: function(data) {
+        const responseVal = jsPsych.data.get().select('temp_check_response').values[0];
+        data.response = responseVal;
+        data.correct = (responseVal === 1);
+      }
+    };
+    timeline.push(check_trial);
+
+    jsPsych.run(timeline);
+
+    // ----------------------------------------------------
+    // 6. GASデータ送信 & デブリーフィング画面表示
+    // ----------------------------------------------------
+    async function sendDataToGAS(data) {
+      const targetDiv = document.getElementById('jspsych-target');
+      
+      targetDiv.innerHTML = `
+        <div class="experiment-card text-center">
+          <div class="loader"></div>
+          <h2 class="text-xl font-bold mb-2 text-slate-800">データをスプレッドシートに送信中...</h2>
+          <p class="text-slate-500 text-sm">画面を閉じずにそのまま少々お待ちください。</p>
+        </div>
+      `;
+
+      const studentId = data.select('student_id').values[0] || "N/A";
+      const age = data.select('age').values[0] || "N/A";
+      const gender = data.select('gender').values[0] || "N/A";
+      const assignedGroup = data.select('assigned_group').values[0] || "UNKNOWN";
+
+      const endTime = performance.now();
+      const rtTotal = Math.round((endTime - startTime) / 1000);
+
+      let isCheckCorrect = "UNKNOWN";
+      const checkTrial = data.filter({question_id: 'comprehension_check'}).values()[0];
+      if (checkTrial) {
+        isCheckCorrect = checkTrial.correct ? "CORRECT" : "INCORRECT";
+      }
+
+      const getTrialData = (qId) => {
+        const trial = data.filter({question_id: qId}).values()[0];
+        return trial ? { response: trial.response_label, rt: Math.round(trial.rt) } : { response: "", rt: "" };
+      };
+
+      const t1_A = getTrialData("target1_A_time");
+      const t1_B = getTrialData("target1_B_money");
+      const t2_A = getTrialData("target2_A_time");
+      const t2_B = getTrialData("target2_B_money");
+
+      const payload = [
+        {
+          category: "学習",
+          condition: assignedGroup,
+          response_A: t1_A.response,
+          response_B: t1_B.response,
+          rt_A: t1_A.rt,
+          rt_B: t1_B.rt,
+          comprehension_check: isCheckCorrect,
+          student_id: studentId,
+          age: age,
+          gender: gender,
+          rt_total: rtTotal
+        },
+        {
+          category: "娯楽消費",
+          condition: assignedGroup,
+          response_A: t2_A.response,
+          response_B: t2_B.response,
+          rt_A: t2_A.rt,
+          rt_B: t2_B.rt,
+          comprehension_check: isCheckCorrect,
+          student_id: studentId,
+          age: age,
+          gender: gender,
+          rt_total: rtTotal
+        }
+      ];
+
+      try {
+        await fetch(GAS_WEBAPP_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        showSuccessScreen(studentId, assignedGroup, isCheckCorrect, payload);
+      } catch (error) {
+        console.error(error);
+        showFailureScreen(studentId, assignedGroup, isCheckCorrect, payload);
+      }
+    }
+
+    function showSuccessScreen(id, group, checkResult, payload) {
+      const targetDiv = document.getElementById('jspsych-target');
+      targetDiv.innerHTML = `
+        <div class="experiment-card">
+          <div class="text-center mb-6">
+            <svg class="mx-auto h-16 w-16 text-emerald-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h1 class="text-3xl font-bold mb-2 text-slate-800">実験データ保存完了！</h1>
+            <p class="text-slate-500">スプレッドシートへのデータ送信が完了しました。ご協力ありがとうございました。</p>
+          </div>
+          
+          <div class="bg-slate-50 p-4 rounded-lg text-left text-xs text-slate-600 mb-6 space-y-1 border border-slate-100">
+            <p><strong>学籍番号:</strong> ${id}</p>
+            <p><strong>割り当て条件:</strong> 条件 ${group}</p>
+            <p><strong>教示理解チェック:</strong> <span class="${checkResult === 'CORRECT' ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}">${checkResult}</span></p>
+          </div>
+
+          <div class="border-t pt-6 text-left">
+            <h2 class="text-xl font-bold mb-4 text-indigo-600">本研究の目的について（デブリーフィング）</h2>
+            <p class="mb-4 text-sm leading-relaxed text-slate-600">
+              本研究は、提示する「質問の順序」が、人間の評価判断に与える影響（順序効果）を検証することを目的としています。
+              ベイズ推論を基礎とする伝統的な「古典確率モデル」に代わり、前に受けた質問の文脈が次の判断に干渉するプロセスを、物理学の数学系を応用した<strong>「量子認知モデル」</strong>を用いて数理的な整合性を検証しています。
+            </p>
+            <p class="mb-4 text-sm leading-relaxed text-slate-600">
+              事前の開示により直感的な評価回答が歪むのを防ぐため、事前説明では研究課題を曖昧にしていましたことをご了承ください。
+            </p>
+          </div>
+        </div>
+      `;
+    }
+
+    function showFailureScreen(id, group, checkResult, payload) {
+      const targetDiv = document.getElementById('jspsych-target');
+      targetDiv.innerHTML = `
+        <div class="experiment-card">
+          <div class="text-center mb-6">
+            <svg class="mx-auto h-16 w-16 text-amber-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h1 class="text-3xl font-bold mb-2 text-slate-800">通信エラーが発生しました</h1>
+            <p class="text-red-500 text-sm">自動送信中にネットワークエラーが起きた可能性があります。</p>
+          </div>
+          
+          <div class="bg-amber-50 p-4 rounded-lg text-left text-xs text-amber-800 mb-6 border border-amber-200">
+            <p class="font-bold mb-1">【実験参加者の方へのお願い】</p>
+            <p>大変お手数ですが、**この画面全体のスクリーンショットを撮影**し、実験責任者までお送りください。</p>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-lg text-left text-xs text-slate-600 mb-6 space-y-1 border border-slate-100">
+            <p><strong>学籍番号:</strong> ${id}</p>
+            <p><strong>学習回答:</strong> A:${payload[0].response_A} / B:${payload[0].response_B}</p>
+            <p><strong>娯楽回答:</strong> A:${payload[1].response_A} / B:${payload[1].response_B}</p>
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
